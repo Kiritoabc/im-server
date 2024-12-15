@@ -1,0 +1,16 @@
+server:
+  http_port: :8080
+  grpc_port: :9090
+
+# docker run --name mysql-im -e MYSQL_ROOT_PASSWORD=Kirito768168 -p 3307:3306 -d mysql:latest
+mysql:
+  host: localhost
+  port: 3307
+  username: root
+  password: Kirito768168
+  database: im_system
+
+# docker run --name mongo-im -p 27017:27017 -d mongo:latest
+mongodb:
+  uri: mongodb://localhost:27017
+  database: im_system

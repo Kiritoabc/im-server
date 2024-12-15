@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "./proto";
+
+service UserService {
+  rpc Register(RegisterRequest) returns (RegisterResponse) {}
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+  rpc AddFriend(AddFriendRequest) returns (AddFriendResponse) {}
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
+}
+
+message RegisterRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message RegisterResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  int32 code = 1;
+  string message = 2;
+  string token = 3;
+}
+
+message AddFriendRequest {
+  int64 user_id = 1;
+  int64 friend_id = 2;
+}
+
+message AddFriendResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+message SendMessageRequest {
+  int64 from_user_id = 1;
+  int64 to_user_id = 2;
+  string content = 3;
+}
+
+message SendMessageResponse {
+  int32 code = 1;
+  string message = 2;
+} 
