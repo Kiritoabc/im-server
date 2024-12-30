@@ -11,7 +11,6 @@ type FriendGroup struct {
 	GroupName string    `gorm:"not null" json:"group_name"`       // 分组名称，不能为空
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"` // 创建时间
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"` // 更新时间
-	//DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"` // 删除时间
 }
 
 func CreateFriendGroup(group FriendGroup) error {

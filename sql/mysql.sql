@@ -104,13 +104,15 @@ CREATE TABLE group_members (
 -- 通知表
 CREATE TABLE notifications (
                                id INT AUTO_INCREMENT PRIMARY KEY, -- 通知ID，自增主键
-                               user_id INT NOT NULL, -- 用户ID，不能为空
+                               sender_id INT NOT NULL, -- 发送者ID，不能为空
+                               receiver_id INT NOT NULL, -- 接收者ID，不能为空
                                type ENUM('message', 'friend_request', 'group_request', 'other') DEFAULT 'message', -- 通知类型，默认为'message'
                                content TEXT, -- 通知内容，允许为空
                                is_read BOOLEAN DEFAULT FALSE, -- 通知是否已读，默认为未读
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 记录创建时间，默认为当前时间
                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录更新时间，在更新时自动设置为当前时间
-                               FOREIGN KEY (user_id) REFERENCES users(id) -- 外键，引用users表中的id
+                               FOREIGN KEY (sender_id) REFERENCES users(id), -- 外键，引用users表中的id
+                               FOREIGN KEY (receiver_id) REFERENCES users(id) -- 外键，引用users表中的id
 );
 
 -- 系统日志表

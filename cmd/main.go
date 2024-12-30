@@ -36,6 +36,9 @@ func main() {
 	friendService := service.NewFriendService()
 	friendHandler := handler.NewFriendHandler(friendService)
 
+	notificationService := service.NewNotificationService()
+	notificationHandler := handler.NewNotificationHandler(notificationService)
+
 	// 设置路由
 	r := gin.Default()
 
@@ -49,7 +52,7 @@ func main() {
 	// 使用 JWT 中间件
 	r.Use(middle.AuthMiddleware())
 
-	router.RegisterRoutes(r, userHandler, friendHandler)
+	router.RegisterRoutes(r, userHandler, friendHandler, notificationHandler)
 
 	// 启动服务器
 	config.Logger.Infof("HTTP服务器启动在端口%s\n", cfg.Server.HTTPPort)

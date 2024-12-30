@@ -7,6 +7,7 @@ import (
 	"im-system/internal/config"
 	"im-system/internal/middle"
 	"im-system/internal/model/db"
+	"im-system/internal/model/dto"
 	"im-system/internal/utils"
 )
 
@@ -43,6 +44,17 @@ func (s *UserService) Register(userInfo db.User) error {
 
 	// 注册用户
 	if err := s.db.Create(&userInfo).Error; err != nil {
+		config.Logger.Error(err)
+		return err
+	}
+
+	// 创建默认的好友分组
+	defaultGroup := db.FriendGroup{
+		UserID:    userInfo.ID, // 使用新注册用户的ID
+		GroupName: "我的好友",      // 默认分组名称
+	}
+
+	if err := s.db.Create(&defaultGroup).Error; err != nil {
 		config.Logger.Error(err)
 		return err
 	}
@@ -84,30 +96,39 @@ func (s *UserService) GetUserInfo(userID uint) (db.User, error) {
 	return user, nil
 }
 
-// AddFriend 添加好友
-func (s *UserService) AddFriend(userID, friendID uint, remark string, groupID *uint) error {
+// AddFriend 添加好友,todo: 事务完善
+func (s *UserService) AddFriend(addFriendDto dto.AddFriendDTO) error {
 	var friend db.User
-	if err := s.db.First(&friend, friendID).Error; err != nil {
+	// 1.查询好友是否存在
+	if err := s.db.First(&friend, addFriendDto.FriendID).Error; err != nil {
 		return errors.New("好友不存在")
 	}
 
-	// 创建好友关系
+	// 查询分组是否存在
+	var group db.FriendGroup
+	if err := s.db.First(&group, addFriendDto.GroupID).Error; err != nil {
+		return errors.New("分组不存在")
+	}
+
+	// 2.创建好友关系，不创建关系表，直接创建通知
 	friendship := db.Friendship{
-		UserID:   userID,
-		FriendID: friendID,
-		Remark:   remark,
-		//GroupID:  uint(groupID),
+		UserID:   addFriendDto.UserID,
+		FriendID: addFriendDto.FriendID,
+		Remark:   addFriendDto.Remark,
+		GroupID:  addFriendDto.GroupID,
+		Status:   "pending", // 发送中
 	}
 
 	if err := s.db.Create(&friendship).Error; err != nil {
 		return err
 	}
 
-	// 创建通知
+	// 3.创建通知。发送通知
 	notification := db.Notification{
-		UserID:  friendID,
-		Type:    "friend_request",
-		Content: fmt.Sprintf("用户 %d 请求添加你为好友", userID),
+		SenderID:   addFriendDto.UserID,
+		ReceiverID: addFriendDto.FriendID,
+		Type:       "friend_request",
+		Content:    addFriendDto.Content,
 	}
 
 	if err := s.db.Create(&notification).Error; err != nil {
