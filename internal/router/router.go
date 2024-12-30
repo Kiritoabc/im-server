@@ -6,7 +6,10 @@ import (
 )
 
 // RegisterRoutes 注册所有路由
-func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler, friendHandler *handler.FriendHandler, notificationHandler *handler.NotificationHandler) {
+func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
+	friendHandler *handler.FriendHandler,
+	notificationHandler *handler.NotificationHandler,
+	friendGroupHandler *handler.FriendGroupHandler) {
 	imGroup := r.Group("/im-server")
 	// 注册登录模块
 	{
@@ -18,11 +21,17 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler, friendHandl
 
 		// 使用 friends 前缀
 		friendsGroup := imGroup.Group("/friends")
-		friendsGroup.POST("/user/:user_id/group", friendHandler.CreateFriendGroup) // 创建好友分组的路由
-		friendsGroup.GET("/user/groups", friendHandler.GetFriendGroups)            // 获取好友分组的路由
+		friendsGroup.GET("/user/groups", friendHandler.GetUserFriendAllFriends) // 获取好友分组的路由
 
-		// 通知模块
+		// notifications 通知模块
 		imGroup.GET("/notifications", notificationHandler.GetNotifications)                      // 获取通知的路由
 		imGroup.POST("/notifications/:notification_id", notificationHandler.HandleFriendRequest) // 处理好友请求
+
+		// friend_groups 好友分组模块
+		imGroup.POST("/friend_groups", friendGroupHandler.CreateFriendGroup)  // 创建好友分组
+		imGroup.GET("/friend_groups", friendGroupHandler.GetUserFriendGroups) // 获取用户的所有好友分组
+
+		// 获取用户发出的所有通知请求
+		imGroup.GET("/sent_notifications", notificationHandler.GetSentNotifications) // 获取发出的通知请求
 	}
 }

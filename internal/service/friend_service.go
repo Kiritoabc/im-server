@@ -16,16 +16,6 @@ func NewFriendService() *FriendService {
 	}
 }
 
-// CreateFriendGroup 创建好友分组
-func (s *FriendService) CreateFriendGroup(userID uint, groupName string) error {
-	group := db.FriendGroup{
-		UserID:    userID,
-		GroupName: groupName,
-	}
-
-	return s.db.Create(&group).Error
-}
-
 // GetFriendGroupsWithMembers 获取用户的好友分组及其成员
 func (s *FriendService) GetFriendGroupsWithMembers(userID uint) ([]vo.FriendGroupVO, error) {
 	var resp []vo.FriendGroupVO

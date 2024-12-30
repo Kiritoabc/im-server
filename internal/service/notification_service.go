@@ -38,13 +38,14 @@ func (s *NotificationService) GetNotifications(userID uint, notificationType str
 		// 查询发送添加好友请求人的信息
 		if err := s.db.First(&sender, notification.SenderID).Error; err == nil {
 			notificationVOs = append(notificationVOs, vo.NotificationVO{
-				ID:        notification.ID,
-				UserID:    notification.ReceiverID,
-				Type:      notification.Type,
-				Content:   notification.Content,
-				IsRead:    notification.IsRead,
-				CreatedAt: notification.CreatedAt,
-				Sender:    sender, // 发送请求的用户信息
+				ID:         notification.ID,
+				UserID:     notification.SenderID,
+				ReceiverID: notification.ReceiverID,
+				Type:       notification.Type,
+				Content:    notification.Content,
+				IsRead:     notification.IsRead,
+				CreatedAt:  notification.CreatedAt,
+				Sender:     sender, // 发送请求的用户信息
 			})
 		}
 	}
@@ -114,4 +115,33 @@ func (s *NotificationService) RejectFriendRequest(notificationID uint) error {
 	}
 
 	return nil
+}
+
+// GetSentNotifications 获取用户发出的所有通知请求
+func (s *NotificationService) GetSentNotifications(userID uint) ([]vo.NotificationVO, error) {
+	var notifications []db.Notification
+	if err := s.db.Where("sender_id = ?", userID).Find(&notifications).Error; err != nil {
+		return nil, err
+	}
+
+	// 创建 NotificationVO 列表
+	var notificationVOs []vo.NotificationVO
+	for _, notification := range notifications {
+		var receiver db.User
+		// 查询接收者的信息
+		if err := s.db.First(&receiver, notification.ReceiverID).Error; err == nil {
+			notificationVOs = append(notificationVOs, vo.NotificationVO{
+				ID:         notification.ID,
+				UserID:     notification.SenderID,
+				ReceiverID: notification.ReceiverID,
+				Type:       notification.Type,
+				Content:    notification.Content,
+				IsRead:     notification.IsRead,
+				CreatedAt:  notification.CreatedAt,
+				Sender:     receiver, // 接收者的信息
+			})
+		}
+	}
+
+	return notificationVOs, nil
 }

@@ -74,3 +74,22 @@ func (h *NotificationHandler) HandleFriendRequest(c *gin.Context) {
 		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的操作"))
 	}
 }
+
+// GetSentNotifications 获取用户发出的所有通知请求
+func (h *NotificationHandler) GetSentNotifications(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	notifications, err := h.notificationService.GetSentNotifications(userID.(uint))
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("获取发出的通知请求成功", notifications))
+}
