@@ -2,8 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"im-system/internal/config"
+	"im-system/internal/model"
+	"im-system/internal/model/db"
 	"im-system/internal/service"
 )
 
@@ -12,92 +16,98 @@ type UserHandler struct {
 }
 
 func NewUserHandler(userService *service.UserService) *UserHandler {
-	return &UserHandler{
-		userService: userService,
-	}
-}
-
-type RegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	return &UserHandler{userService: userService}
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
-	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var user db.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
 		return
 	}
 
-	if err := h.userService.Register(req.Username, req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.userService.Register(user); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "注册成功"})
-}
-
-type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	model.SendResponse(c, http.StatusOK, model.Success("注册成功", nil))
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var loginData struct {
+		PhoneNumber string `json:"phone_number"`
+		Password    string `json:"password"`
+	}
+
+	if err := c.ShouldBindJSON(&loginData); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
 		return
 	}
 
-	userID, err := h.userService.Login(req.Username, req.Password)
+	userID, token, err := h.userService.Login(loginData.PhoneNumber, loginData.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusUnauthorized, model.Error(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "登录成功",
-		"user_id": userID,
-	})
+	model.SendResponse(c, http.StatusOK, model.Success("登录成功", gin.H{"user_id": userID, "token": token}))
 }
 
-type AddFriendRequest struct {
-	UserID   uint `json:"user_id" binding:"required"`
-	FriendID uint `json:"friend_id" binding:"required"`
+// GetUserInfo 获取用户信息
+func (h *UserHandler) GetUserInfo(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("未提供用户ID"))
+		return
+	}
+
+	user, err := h.userService.GetUserInfo(userID.(uint))
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusNotFound, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("获取用户信息成功", user))
 }
 
+// AddFriend 添加好友
 func (h *UserHandler) AddFriend(c *gin.Context) {
-	var req AddFriendRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	userIDStr := c.Param("user_id")
+	friendIDStr := c.Param("friend_id")
+	remark := c.Query("remark")       // 从查询参数获取备注
+	groupIDStr := c.Query("group_id") // 从查询参数获取分组ID。这个前端需要传过来
+
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的用户ID"))
 		return
 	}
 
-	if err := h.userService.AddFriend(req.UserID, req.FriendID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	friendID, err := strconv.ParseUint(friendIDStr, 10, 32)
+	if err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的好友ID"))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "添加好友成功"})
+	var groupID *uint
+	if groupIDStr != "" {
+		id, err := strconv.ParseUint(groupIDStr, 10, 32)
+		if err == nil {
+			groupID = new(uint)
+			*groupID = uint(id)
+		}
+	}
+
+	if err := h.userService.AddFriend(uint(userID), uint(friendID), remark, groupID); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("好友添加成功", nil))
 }
-
-type SendMessageRequest struct {
-	FromUserID uint   `json:"from_user_id" binding:"required"`
-	ToUserID   uint   `json:"to_user_id" binding:"required"`
-	Content    string `json:"content" binding:"required"`
-}
-
-func (h *UserHandler) SendMessage(c *gin.Context) {
-	var req SendMessageRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := h.userService.SendMessage(req.FromUserID, req.ToUserID, req.Content); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "发送消息成功"})
-} 

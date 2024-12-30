@@ -1,76 +1,119 @@
 package service
 
 import (
-	"context"
 	"errors"
-	"time"
-
-	"im-system/internal/model"
-	"golang.org/x/crypto/bcrypt"
+	"fmt"
+	"gorm.io/gorm"
+	"im-system/internal/config"
+	"im-system/internal/middle"
+	"im-system/internal/model/db"
+	"im-system/internal/utils"
 )
 
 type UserService struct {
-	// 在这里可以注入其他依赖
+	db *gorm.DB
 }
 
 func NewUserService() *UserService {
-	return &UserService{}
+	return &UserService{
+		db: db.DB,
+	}
 }
 
-func (s *UserService) Register(username, password string) error {
-	var existUser model.User
-	if err := model.DB.Where("username = ?", username).First(&existUser).Error; err == nil {
-		return errors.New("用户名已存在")
+func (s *UserService) Register(userInfo db.User) error {
+	var existUser db.User
+	if err := s.db.Where("phone_number = ?", userInfo.PhoneNumber).First(&existUser).Error; err == nil {
+		return errors.New("手机号已经被注册")
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
+	userInfo.PasswordHash = utils.HashPassword(userInfo.PasswordHash)
+
+	// 防止邮箱为空
+	if userInfo.Email == "" {
+		userInfo.Email = fmt.Sprintf("%s@imSystem.com", userInfo.Username)
+	}
+
+	// 默认为 male
+	if userInfo.Gender == "" {
+		userInfo.Gender = "male"
+	}
+	if userInfo.AvatarURL == "" {
+		userInfo.AvatarURL = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3w2fqb71MsCj97IKLAUXoI6BS4IfeCeEoq_XGS3X2CErGlYyP4xxX4eQ&s"
+	}
+
+	// 注册用户
+	if err := s.db.Create(&userInfo).Error; err != nil {
+		config.Logger.Error(err)
 		return err
 	}
 
-	user := model.User{
-		Username: username,
-		Password: string(hashedPassword),
-	}
-
-	return model.DB.Create(&user).Error
+	return nil
 }
 
-func (s *UserService) Login(username, password string) (uint, error) {
-	var user model.User
-	if err := model.DB.Where("username = ?", username).First(&user).Error; err != nil {
-		return 0, errors.New("用户不存在")
+func (s *UserService) Login(phoneNumber, password string) (uint, string, error) {
+	var user db.User
+	if err := s.db.Where("phone_number = ?", phoneNumber).First(&user).Error; err != nil {
+		return 0, "", errors.New("用户不存在")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return 0, errors.New("密码错误")
+	if !utils.ComparePassword(user.PasswordHash, password) {
+		return 0, "", errors.New("密码错误")
 	}
 
-	return user.ID, nil
+	// 生成 JWT
+	token, err := middle.GenerateJWT(user.ID)
+	if err != nil {
+		return 0, "", err
+	}
+
+	// 将 token 和用户信息存储到 Redis
+	if err := middle.SetTokenToRedis(user.ID, user); err != nil {
+		return 0, "", err
+	}
+
+	// 返回用户ID和token
+	return user.ID, token, nil
 }
 
-func (s *UserService) AddFriend(userID, friendID uint) error {
-	var friend model.User
-	if err := model.DB.First(&friend, friendID).Error; err != nil {
+// GetUserInfo 获取用户信息
+func (s *UserService) GetUserInfo(userID uint) (db.User, error) {
+	var user db.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return user, errors.New("用户不存在")
+	}
+	return user, nil
+}
+
+// AddFriend 添加好友
+func (s *UserService) AddFriend(userID, friendID uint, remark string, groupID *uint) error {
+	var friend db.User
+	if err := s.db.First(&friend, friendID).Error; err != nil {
 		return errors.New("好友不存在")
 	}
 
-	friendship := model.Friend{
+	// 创建好友关系
+	friendship := db.Friendship{
 		UserID:   userID,
 		FriendID: friendID,
+		Remark:   remark,
+		//GroupID:  uint(groupID),
 	}
 
-	return model.DB.Create(&friendship).Error
-}
-
-func (s *UserService) SendMessage(fromUserID, toUserID uint, content string) error {
-	message := model.Message{
-		FromUserID: fromUserID,
-		ToUserID:   toUserID,
-		Content:    content,
-		CreatedAt:  time.Now(),
+	if err := s.db.Create(&friendship).Error; err != nil {
+		return err
 	}
 
-	_, err := model.MongoDB.Collection("messages").InsertOne(context.Background(), message)
-	return err
+	// 创建通知
+	notification := db.Notification{
+		UserID:  friendID,
+		Type:    "friend_request",
+		Content: fmt.Sprintf("用户 %d 请求添加你为好友", userID),
+	}
+
+	if err := s.db.Create(&notification).Error; err != nil {
+		config.Logger.Error(err)
+		return err
+	}
+
+	return nil
 }
