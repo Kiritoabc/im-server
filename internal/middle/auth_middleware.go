@@ -40,7 +40,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		cacheUserInfo, err := config.RedisClient.Get(ctx, getRedisUserInfoKey(userID)).Result()
+		cacheUserInfo, err := config.RedisClient.Get(ctx, GetRedisUserInfoKey(userID)).Result()
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "用户信息已过期，请重新登录"})
 			c.Abort()

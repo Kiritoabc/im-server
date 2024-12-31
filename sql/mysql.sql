@@ -51,6 +51,7 @@ CREATE TABLE `groups` (
                           id INT AUTO_INCREMENT PRIMARY KEY, -- 群组ID，自增主键
                           name VARCHAR(255) NOT NULL, -- 群组名称，不能为空
                           owner_id INT NOT NULL, -- 群主的用户ID，不能为空
+                          avatar_url VARCHAR(255) DEFAULT 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3w2fqb71MsCj97IKLAUXoI6BS4IfeCeEoq_XGS3X2CErGlYyP4xxX4eQ&s', -- 群组头像URL，不允许为空
                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 记录创建时间，默认为当前时间
                           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录更新时间，在更新时自动设置为当前时间
                           FOREIGN KEY (owner_id) REFERENCES users(id) -- 外键，引用users表中的id
@@ -91,7 +92,7 @@ CREATE TABLE group_members (
                                id INT AUTO_INCREMENT PRIMARY KEY,                                          -- 群组成员关系ID，自增主键
                                group_id INT NOT NULL,                                                      -- 群组ID，不能为空
                                user_id INT NOT NULL,                                                       -- 用户ID，不能为空
-                               role ENUM('admin', 'member') NOT NULL DEFAULT 'member',                     -- 成员类型，默认为普通成员
+                               role ENUM('admin', 'member','owner') NOT NULL DEFAULT 'member',             -- 成员类型，默认为普通成员
                                title VARCHAR(255),                                                         -- 成员在群组中的称号，允许为空
                                level INT NOT NULL DEFAULT 1,                                               -- 成员等级，默认为1
                                nickname VARCHAR(255),                                                      -- 用户在群组中的昵称，允许为空
@@ -101,18 +102,20 @@ CREATE TABLE group_members (
                                FOREIGN KEY (user_id) REFERENCES users(id)                                  -- 外键，引用users表中的id
 );
 
--- 通知表
+-- 示例通知表
 CREATE TABLE notifications (
                                id INT AUTO_INCREMENT PRIMARY KEY, -- 通知ID，自增主键
                                sender_id INT NOT NULL, -- 发送者ID，不能为空
                                receiver_id INT NOT NULL, -- 接收者ID，不能为空
-                               type ENUM('message', 'friend_request', 'group_request', 'other') DEFAULT 'message', -- 通知类型，默认为'message'
+                               type ENUM('message', 'friend_request', 'group_request', 'group_invite', 'other') DEFAULT 'message', -- 通知类型，默认为'message'
                                content TEXT, -- 通知内容，允许为空
                                is_read BOOLEAN DEFAULT FALSE, -- 通知是否已读，默认为未读
+                               group_id INT, -- 群组ID，允许为空
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 记录创建时间，默认为当前时间
                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录更新时间，在更新时自动设置为当前时间
                                FOREIGN KEY (sender_id) REFERENCES users(id), -- 外键，引用users表中的id
-                               FOREIGN KEY (receiver_id) REFERENCES users(id) -- 外键，引用users表中的id
+                               FOREIGN KEY (receiver_id) REFERENCES users(id), -- 外键，引用users表中的id
+                               FOREIGN KEY (group_id) REFERENCES `groups`(id) -- 外键，引用groups表中的id
 );
 
 -- 系统日志表

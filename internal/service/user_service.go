@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"im-system/internal/config"
 	"im-system/internal/middle"
@@ -136,5 +137,15 @@ func (s *UserService) AddFriend(addFriendDto dto.AddFriendDTO) error {
 		return err
 	}
 
+	return nil
+}
+
+// Logout 处理用户退出登录
+func (s *UserService) Logout(c *gin.Context, userId uint) error {
+	// 删除 Redis 中的用户信息
+	if err := config.RedisClient.Del(c, middle.GetRedisUserInfoKey(userId)).Err(); err != nil {
+		config.Logger.Error(err)
+		return err
+	}
 	return nil
 }

@@ -100,3 +100,21 @@ func (h *UserHandler) AddFriend(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("发送好友添加请求", nil))
 }
+
+// Logout 处理用户退出登录
+func (h *UserHandler) Logout(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	if err := h.userService.Logout(c, userID.(uint)); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("退出登录失败"))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("退出登录成功", nil))
+}
