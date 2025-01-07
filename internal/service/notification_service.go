@@ -17,6 +17,11 @@ func NewNotificationService() *NotificationService {
 	}
 }
 
+const (
+	// DefaultGroupName TODO: 后续优化这个分组
+	DefaultGroupName = "我的好友"
+)
+
 // GetNotifications 获取用户的通知
 func (s *NotificationService) GetNotifications(userID uint, notificationType string) ([]vo.NotificationVO, error) {
 	var notifications []db.Notification
@@ -67,6 +72,7 @@ func (s *NotificationService) AcceptFriendRequest(notificationID uint, groupId u
 
 	// 更新通知状态为已读
 	notification.IsRead = true
+	notification.Status = "accepted"
 	if err := s.db.Save(&notification).Error; err != nil {
 		return err
 	}
@@ -77,19 +83,35 @@ func (s *NotificationService) AcceptFriendRequest(notificationID uint, groupId u
 		return errors.New("请求者信息不存在")
 	}
 
-	// 创建请求者的好友关系
+	// 如果groupId为0， 则查询当前用户的group的好友分组
+	friendGroup := db.FriendGroup{}
+	if err := s.db.Where("user_id = ? and group_name = ? ", notification.ReceiverID, DefaultGroupName).
+		First(&friendGroup).Error; err != nil {
+		return errors.New("分组不存在")
+	}
+	// 创建被请求者的好友关系
 	friendship := db.Friendship{
 		UserID:   notification.ReceiverID, // 被请求者的用户ID
 		FriendID: notification.SenderID,   // 请求者的用户ID
 		Status:   "accepted",              // 状态为已接受
 		Remark:   requester.Username,      // 使用请求者的用户名作为备注
-		GroupID:  groupId,                 // 分组ID
+		GroupID:  friendGroup.ID,          // 分组ID
 	}
 
 	if err := s.db.Create(&friendship).Error; err != nil {
 		return err
 	}
-
+	// 更新请求者的好友关系
+	senderFriendShip := db.Friendship{}
+	if err := s.db.Model(&db.Friendship{}).
+		Where("user_id =? and friend_id =?", notification.SenderID, notification.ReceiverID).
+		First(&senderFriendShip).Error; err != nil {
+		return err
+	}
+	senderFriendShip.Status = "accepted"
+	if err := s.db.Save(&senderFriendShip).Error; err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -102,7 +124,7 @@ func (s *NotificationService) RejectFriendRequest(notificationID uint) error {
 
 	// 更新通知状态为已读
 	notification.IsRead = true
-	notification.Type = "rejected"
+	notification.Status = "rejected"
 	if err := s.db.Save(&notification).Error; err != nil {
 		return err
 	}
@@ -137,6 +159,7 @@ func (s *NotificationService) GetSentNotifications(userID uint) ([]vo.Notificati
 				Type:       notification.Type,
 				Content:    notification.Content,
 				IsRead:     notification.IsRead,
+				Status:     notification.Status,
 				CreatedAt:  notification.CreatedAt,
 				Sender:     receiver, // 接收者的信息
 			})
@@ -144,4 +167,39 @@ func (s *NotificationService) GetSentNotifications(userID uint) ([]vo.Notificati
 	}
 
 	return notificationVOs, nil
+}
+
+// GetFriendRequestNotifications 获取特定用户的所有好友请求通知
+func (s *NotificationService) GetFriendRequestNotifications(userID uint) ([]vo.NotificationVO, error) {
+	var notifications []db.Notification
+	err := s.db.Where("(sender_id = ? OR receiver_id = ?) AND type = ?", userID, userID, "friend_request").
+		Find(&notifications).Error
+
+	// 创建 NotificationVO 列表
+	var notificationVOs []vo.NotificationVO
+	for _, notification := range notifications {
+		var receiver db.User
+		// 查询发送添加好友请求人的信息， 我发送的，则查询接收者的id， 别人发送的，则查询发送者的id
+		searchId := userID
+		if userID != notification.SenderID {
+			searchId = notification.SenderID
+		} else {
+			searchId = notification.ReceiverID
+		}
+		if err := s.db.First(&receiver, searchId).Error; err == nil {
+			notificationVOs = append(notificationVOs, vo.NotificationVO{
+				ID:         notification.ID,
+				UserID:     notification.SenderID,
+				ReceiverID: notification.ReceiverID,
+				Type:       notification.Type,
+				Content:    notification.Content,
+				IsRead:     notification.IsRead,
+				Status:     notification.Status,
+				CreatedAt:  notification.CreatedAt,
+				Sender:     receiver, //
+			})
+		}
+	}
+
+	return notificationVOs, err
 }

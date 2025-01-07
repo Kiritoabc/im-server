@@ -9,6 +9,7 @@ import (
 	"im-system/internal/middle"
 	"im-system/internal/model/db"
 	"im-system/internal/model/dto"
+	"im-system/internal/model/vo"
 	"im-system/internal/utils"
 )
 
@@ -89,12 +90,24 @@ func (s *UserService) Login(phoneNumber, password string) (uint, string, error) 
 }
 
 // GetUserInfo 获取用户信息
-func (s *UserService) GetUserInfo(userID uint) (db.User, error) {
+func (s *UserService) GetUserInfo(userID uint) (vo.UserVO, error) {
 	var user db.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return user, errors.New("用户不存在")
+		return vo.UserVO{}, err
 	}
-	return user, nil
+
+	return vo.UserVO{
+		ID:          user.ID,
+		Username:    user.Username,
+		Email:       user.Email,
+		PhoneNumber: user.PhoneNumber,
+		AvatarURL:   user.AvatarURL,
+		Bio:         user.Bio,
+		Gender:      user.Gender,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		City:        user.City,
+	}, nil
 }
 
 // AddFriend 添加好友,todo: 事务完善
@@ -148,4 +161,85 @@ func (s *UserService) Logout(c *gin.Context, userId uint) error {
 		return err
 	}
 	return nil
+}
+
+// UpdateUserInfo 更新用户信息
+func (s *UserService) UpdateUserInfo(userID uint, updateData db.User) error {
+	var user db.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return err
+	}
+	// 更新用户信息
+	if updateData.Username != "" {
+		user.Username = updateData.Username
+	}
+	if updateData.City != "" {
+		user.City = updateData.City
+	}
+	if updateData.AvatarURL != "" {
+		user.AvatarURL = updateData.AvatarURL
+	}
+	if updateData.Bio != "" {
+		user.Bio = updateData.Bio
+	}
+	if updateData.Gender != "" {
+		user.Gender = updateData.Gender
+	}
+	if updateData.DateOfBirth != "" {
+		user.DateOfBirth = updateData.DateOfBirth
+	}
+	return s.db.Save(&user).Error
+}
+
+// QueryUserAndGroup 查询用户和群聊信息
+func (s *UserService) QueryUserAndGroup(dto dto.QueryUserAndGroupDTO) (vo.UserAndGroupVO, error) {
+	var users []db.User
+	var groups []db.Group
+
+	// 查询用户
+	if dto.SearchId != "" {
+		if err := s.db.Where("id LIKE ?", "%"+dto.SearchId+"%").Find(&users).Error; err != nil {
+			return vo.UserAndGroupVO{}, err
+		}
+	}
+
+	// 查询群组
+	if dto.SearchId != "" {
+		if err := s.db.Where("id LIKE ?", "%"+dto.SearchId+"%").Find(&groups).Error; err != nil {
+			return vo.UserAndGroupVO{}, err
+		}
+	}
+
+	// 转换为 VO
+	var userVOs []vo.UserVO
+	for _, user := range users {
+		userVOs = append(userVOs, vo.UserVO{
+			ID:          user.ID,
+			Username:    user.Username,
+			Email:       user.Email,
+			PhoneNumber: user.PhoneNumber,
+			AvatarURL:   user.AvatarURL,
+			Bio:         user.Bio,
+			Gender:      user.Gender,
+			CreatedAt:   user.CreatedAt,
+			UpdatedAt:   user.UpdatedAt,
+		})
+	}
+
+	var groupVOs []vo.GroupVO
+	for _, group := range groups {
+		groupVOs = append(groupVOs, vo.GroupVO{
+			ID:          group.ID,
+			Name:        group.Name,
+			OwnerID:     group.OwnerID,
+			GroupAvatar: group.GroupAvatar,
+			CreatedAt:   group.CreatedAt,
+			UpdatedAt:   group.UpdatedAt,
+		})
+	}
+
+	return vo.UserAndGroupVO{
+		Users:  userVOs,
+		Groups: groupVOs,
+	}, nil
 }

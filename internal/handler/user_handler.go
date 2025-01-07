@@ -118,3 +118,55 @@ func (h *UserHandler) Logout(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("退出登录成功", nil))
 }
+
+// UpdateUserInfo 更新用户信息
+func (h *UserHandler) UpdateUserInfo(c *gin.Context) {
+	var updateUserDTO dto.UpdateUserDTO
+	if err := c.ShouldBindJSON(&updateUserDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	user := db.User{
+		ID:          userID.(uint),
+		Username:    updateUserDTO.Username,
+		AvatarURL:   updateUserDTO.AvatarURL,
+		DateOfBirth: updateUserDTO.Birthday,
+		City:        updateUserDTO.City,
+		Bio:         updateUserDTO.Bio,
+		Gender:      updateUserDTO.Gender,
+	}
+
+	if err := h.userService.UpdateUserInfo(userID.(uint), user); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("用户信息更新成功", nil))
+}
+
+// QueryUserAndGroup 查询用户和群聊信息
+func (h *UserHandler) QueryUserAndGroup(c *gin.Context) {
+	var queryDTO dto.QueryUserAndGroupDTO
+	if err := c.ShouldBindJSON(&queryDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	result, err := h.userService.QueryUserAndGroup(queryDTO)
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("查询成功", result))
+}

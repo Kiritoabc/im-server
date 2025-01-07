@@ -13,7 +13,7 @@ type User struct {
 	PasswordHash string    `gorm:"not null" json:"password_hash"`       // 密码哈希值，不能为空
 	AvatarURL    string    `gorm:"default:''" json:"avatar_url"`        // 用户头像URL，允许为空
 	Bio          string    `gorm:"default:''" json:"bio"`               // 用户个人简介，允许为空
-	Gender       string    `gorm:"not null" json:"gender"`              // 用户性别，不能为空
+	Gender       string    `gorm:"not null" json:"gender"`              // 用户性别，不能为空,male、female、other
 	Address      string    `gorm:"default:''" json:"address"`           // 用户住址，允许为空
 	City         string    `gorm:"default:''" json:"city"`              // 用户所在城市，允许为空
 	State        string    `gorm:"default:''" json:"state"`             // 用户所在州/省，允许为空

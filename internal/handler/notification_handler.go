@@ -51,6 +51,10 @@ func (h *NotificationHandler) HandleFriendRequest(c *gin.Context) {
 		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的通知ID"))
 		return
 	}
+	if groupIdStr == "" {
+		// 默认使用0
+		groupIdStr = "0"
+	}
 	groupId, err := strconv.ParseUint(groupIdStr, 10, 32)
 	if err != nil {
 		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的通知群组ID"))
@@ -92,4 +96,23 @@ func (h *NotificationHandler) GetSentNotifications(c *gin.Context) {
 	}
 
 	model.SendResponse(c, http.StatusOK, model.Success("获取发出的通知请求成功", notifications))
+}
+
+// GetFriendRequestNotifications 获取特定用户的所有好友请求通知
+func (h *NotificationHandler) GetFriendRequestNotifications(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	notifications, err := h.notificationService.GetFriendRequestNotifications(userID.(uint))
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("获取好友请求通知成功", notifications))
 }

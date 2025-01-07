@@ -19,7 +19,9 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.POST("/logout", userHandler.Logout) // 退出登录接口
 		// user 模块
 		imGroup.GET("/user/userInfo", userHandler.GetUserInfo)
-		imGroup.POST("/user/add_friend", userHandler.AddFriend) // 添加好友的路由
+		imGroup.POST("/user/add_friend", userHandler.AddFriend)    // 添加好友的路由
+		imGroup.POST("/user/update", userHandler.UpdateUserInfo)   // 更新用户信息
+		imGroup.POST("/user/query", userHandler.QueryUserAndGroup) // 查询用户和群聊信息
 
 		// 使用 friends 前缀
 		friendsGroup := imGroup.Group("/friends")
@@ -29,6 +31,7 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.GET("/notifications", notificationHandler.GetNotifications)                            // 获取通知的路由
 		imGroup.POST("/notifications/:notification_id", notificationHandler.HandleFriendRequest)       // 处理好友请求
 		imGroup.GET("/notifications/get/sent_notifications", notificationHandler.GetSentNotifications) // 获取已发送的好友请求
+		imGroup.GET("/notifications/friend_requests", notificationHandler.GetFriendRequestNotifications)
 
 		// friend_groups 好友分组模块
 		imGroup.POST("/friend_groups", friendGroupHandler.CreateFriendGroup)  // 创建好友分组

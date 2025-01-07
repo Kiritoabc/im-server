@@ -110,6 +110,7 @@ CREATE TABLE notifications (
                                type ENUM('message', 'friend_request', 'group_request', 'group_invite', 'other') DEFAULT 'message', -- 通知类型，默认为'message'
                                content TEXT, -- 通知内容，允许为空
                                is_read BOOLEAN DEFAULT FALSE, -- 通知是否已读，默认为未读
+                               z ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending', -- 通知状态，默认为'pending'
                                group_id INT, -- 群组ID，允许为空
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 记录创建时间，默认为当前时间
                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录更新时间，在更新时自动设置为当前时间
