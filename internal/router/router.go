@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"im-system/internal/handler"
+	"im-system/internal/middle"
 )
 
 // RegisterRoutes 注册所有路由
@@ -10,7 +11,8 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 	friendHandler *handler.FriendHandler,
 	notificationHandler *handler.NotificationHandler,
 	friendGroupHandler *handler.FriendGroupHandler,
-	groupHandler *handler.GroupHandler) {
+	groupHandler *handler.GroupHandler,
+	webSocketHandler *handler.WebSocketHandler) {
 	imGroup := r.Group("/im-server")
 	// 注册登录模块
 	{
@@ -41,5 +43,8 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.POST("/groups", groupHandler.CreateGroup)       // 创建群组
 		imGroup.POST("/groups/query", groupHandler.QueryGroups) // 查询群组
 		imGroup.GET("/groups/user", groupHandler.GetUserGroups) // 获取用户所在的群聊
+
+		// WebSocket 路由，使用鉴权中间件
+		imGroup.GET("/ws", middle.AuthWSMiddleware(), webSocketHandler.HandleWebSocket)
 	}
 }

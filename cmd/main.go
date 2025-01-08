@@ -45,6 +45,13 @@ func main() {
 	groupService := service.NewGroupService()
 	groupHandler := handler.NewGroupHandler(groupService)
 
+	// 初始化消息服务
+	messageService := service.NewMessageService()
+
+	// 初始化 WebSocket 处理器
+	webSocketHandler := handler.NewWebSocketHandler(messageService)
+	go webSocketHandler.StartMessageHandler() // 启动消息处理
+
 	// 设置路由
 	r := gin.Default()
 
@@ -58,7 +65,8 @@ func main() {
 	// 使用 JWT 中间件
 	r.Use(middle.AuthMiddleware())
 
-	router.RegisterRoutes(r, userHandler, friendHandler, notificationHandler, friendGroupHandler, groupHandler)
+	// 注册路由
+	router.RegisterRoutes(r, userHandler, friendHandler, notificationHandler, friendGroupHandler, groupHandler, webSocketHandler)
 
 	// 启动服务器
 	config.Logger.Infof("HTTP服务器启动在端口%s\n", cfg.Server.HTTPPort)

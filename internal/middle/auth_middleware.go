@@ -15,11 +15,10 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 忽略注册和登录请求
-		if c.Request.URL.Path == "/im-server/register" || c.Request.URL.Path == "/im-server/login" {
+		if c.Request.URL.Path == "/im-server/register" || c.Request.URL.Path == "/im-server/login" || c.Request.URL.Path == "/im-server/ws" {
 			c.Next()
 			return
 		}
-
 		// 从请求头中获取 token
 		token := c.Request.Header.Get("token")
 		if token == "" {
