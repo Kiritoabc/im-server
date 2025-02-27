@@ -3,7 +3,7 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"im-system/internal/handler"
-	"im-system/internal/middle"
+	"im-system/internal/module/kimi"
 )
 
 // RegisterRoutes 注册所有路由
@@ -45,6 +45,6 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.GET("/groups/user", groupHandler.GetUserGroups) // 获取用户所在的群聊
 
 		// WebSocket 路由，使用鉴权中间件
-		imGroup.GET("/ws", middle.AuthWSMiddleware(), webSocketHandler.HandleWebSocket)
+		imGroup.GET("/ws", kimi.HandleWebSocket)
 	}
 }
