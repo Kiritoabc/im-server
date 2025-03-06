@@ -15,7 +15,8 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 忽略注册和登录请求
-		if c.Request.URL.Path == "/im-server/register" || c.Request.URL.Path == "/im-server/login" || c.Request.URL.Path == "/im-server/ws" {
+		if c.Request.URL.Path == "/im-server/register" || c.Request.URL.Path == "/im-server/login" ||
+			c.Request.URL.Path == "/im-server/ws" || c.Request.URL.Path == "/im-server/private/chat" {
 			c.Next()
 			return
 		}

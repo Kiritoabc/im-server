@@ -28,6 +28,7 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		// 使用 friends 前缀
 		friendsGroup := imGroup.Group("/friends")
 		friendsGroup.GET("/user/groups", friendHandler.GetUserFriendAllFriends) // 获取好友分组的路由
+		friendsGroup.GET("/usr/friends_chat", friendHandler.GetUserFriendsChat) // 获取用户的好友列表(用于私聊模块)
 
 		// notifications 通知模块
 		imGroup.GET("/notifications", notificationHandler.GetNotifications)                            // 获取通知的路由
@@ -46,5 +47,8 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 
 		// WebSocket 路由，使用鉴权中间件
 		imGroup.GET("/ws", kimi.HandleWebSocket)
+
+		// 聊天模块
+		imGroup.GET("/private/chat", webSocketHandler.SendMessage) // 发送消息
 	}
 }

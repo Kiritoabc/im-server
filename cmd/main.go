@@ -15,7 +15,7 @@ func main() {
 	config.InitLogger()
 
 	// 加载配置
-	cfg, err := config.LoadConfig("config/config.yaml")
+	cfg, err := config.LoadConfig("config/config-docker.yaml")
 	if err != nil {
 		config.Logger.Fatalf("加载配置失败: %v", err)
 	}
@@ -50,7 +50,7 @@ func main() {
 
 	// 初始化 WebSocket 处理器
 	webSocketHandler := handler.NewWebSocketHandler(messageService)
-	go webSocketHandler.StartMessageHandler() // 启动消息处理
+	//go webSocketHandler.StartMessageHandler() // 启动消息处理
 
 	// 设置路由
 	r := gin.Default()
