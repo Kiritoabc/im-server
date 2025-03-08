@@ -97,3 +97,21 @@ func (h *GroupHandler) GetUserGroups(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("获取群聊信息成功", groups))
 }
+
+// GetMyAllGroups 获取用户的所有群聊
+func (h *GroupHandler) GetMyAllGroups(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+	groups, err := h.groupService.GetMyAllGroups(userID.(uint))
+
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("获取群聊失败"))
+		return
+	}
+	model.SendResponse(c, http.StatusOK, model.Success("获取群聊信息成功", groups))
+}

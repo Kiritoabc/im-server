@@ -30,6 +30,12 @@ var GroupNameMap = map[string]string{
 	Member: "我加入的群聊",
 }
 
+const (
+	defaultUserAvatar = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3w2fqb71MsCj97IKLAUXoI6BS4IfeCeEoq_XGS3X2CErGlYyP4xxX4eQ&s"
+	GroupTypePublic   = "public"
+	GroupTypePrivate  = "private"
+)
+
 // CreateGroup 创建群组
 func (s *GroupService) CreateGroup(group db.Group, userInfo db.User) error {
 	// 创建群组记录
@@ -146,4 +152,90 @@ func (s *GroupService) GetUserGroups(userID uint) (map[string][]vo.GroupChatVO, 
 	}
 
 	return resp, nil
+}
+
+// GetMyAllGroups 获取用户的所有群聊
+func (s *GroupService) GetMyAllGroups(userId uint) (vo.GroupChatList, error) {
+	// 查询所有和我有关的群聊
+	var groupMembers []db.GroupMember
+	if err := s.db.Where("user_id =?", userId).Find(&groupMembers).Error; err != nil {
+		return vo.GroupChatList{}, err
+	}
+	// 构建响应数据
+	var groupChatList vo.GroupChatList
+	var createGroups []vo.GroupChatDetail
+	var managedGroups []vo.GroupChatDetail
+	var joinedGroups []vo.GroupChatDetail
+	for _, groupMember := range groupMembers {
+		// 查询群的基本信息
+		var group db.Group
+		if err := s.db.First(&group, groupMember.GroupID).Error; err != nil {
+			return vo.GroupChatList{}, err
+		}
+		// todo: 查询群的统计信息
+		// 查询群成员信息
+		var members []db.GroupMember
+		if err := s.db.Where("group_id =?", groupMember.GroupID).Find(&members).Error; err != nil {
+			return vo.GroupChatList{}, err
+		}
+		var groupStatus vo.GroupStats
+		groupStatus.Active = len(members)
+		groupStatus.Male = 1
+		groupStatus.Local = 0
+		var previewMembers []vo.PreviewMember
+		for _, member := range members {
+			previewMembers = append(previewMembers, vo.PreviewMember{
+				ID:   member.UserID,
+				Name: member.Nickname,
+				// todo: 查询用户头像
+				Avatar: defaultUserAvatar,
+				Role:   member.Role,
+			})
+		}
+		// 判断是否是创建者，管理员，普通成员
+		if groupMember.Role == Owner {
+			createGroups = append(createGroups, vo.GroupChatDetail{
+				ID:          group.ID,
+				Name:        group.Name,
+				Avatar:      defaultUserAvatar,
+				MemberCount: len(members),
+				// todo: 添加群聊统计信息
+				Category:       "游戏交友",
+				Announcement:   "暂无",
+				Description:    "暂无",
+				Stats:          groupStatus,
+				PreviewMembers: previewMembers,
+			})
+		} else if groupMember.Role == Admin {
+			managedGroups = append(managedGroups, vo.GroupChatDetail{
+				ID:          group.ID,
+				Name:        group.Name,
+				Avatar:      defaultUserAvatar,
+				MemberCount: len(members),
+				// todo: 添加群聊统计信息
+				Category:       "游戏交友",
+				Announcement:   "暂无",
+				Description:    "暂无",
+				Stats:          groupStatus,
+				PreviewMembers: previewMembers,
+			})
+		} else if groupMember.Role == Member {
+			joinedGroups = append(joinedGroups, vo.GroupChatDetail{
+				ID:          group.ID,
+				Name:        group.Name,
+				Avatar:      defaultUserAvatar,
+				MemberCount: len(members),
+				// todo: 添加群聊统计信息
+				Category:       "游戏交友",
+				Announcement:   "暂无",
+				Description:    "暂无",
+				Stats:          groupStatus,
+				PreviewMembers: previewMembers,
+			})
+		}
+	}
+	groupChatList.CreatedGroups = createGroups
+	groupChatList.ManagedGroups = managedGroups
+	groupChatList.JoinedGroups = joinedGroups
+	return groupChatList, nil
 }
