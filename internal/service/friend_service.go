@@ -76,6 +76,28 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 			})
 		}
 	}
+	// 查询我所在的群聊
+	var groupMembers []db.GroupMember
+	if err := s.db.Where("user_id =?", userId).Find(&groupMembers).Error; err != nil {
+		return nil, err
+	}
+	// 这里可以进一步查询每个好友的基本信息
+	for _, group := range groupMembers {
+		groupInfo := db.Group{}
+		if err := s.db.First(&groupInfo, group.GroupID).Error; err != nil {
+			return nil, err
+		}
+		// 将用户信息添加到分组中
+		resp = append(resp, vo.ChatVO{
+			ID:          int(groupInfo.ID),
+			Name:        groupInfo.Name,
+			Avatar:      groupInfo.GroupAvatar,
+			LastMessage: "",
+			Type:        "group",
+			// todo: 查询和好友所有的聊天记录
+			Messages: []vo.MessageVO{},
+		})
+	}
 
 	return resp, nil
 }

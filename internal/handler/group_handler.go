@@ -115,3 +115,20 @@ func (h *GroupHandler) GetMyAllGroups(c *gin.Context) {
 	}
 	model.SendResponse(c, http.StatusOK, model.Success("获取群聊信息成功", groups))
 }
+
+// GetGroupMembers 获取群聊成员
+func (h *GroupHandler) GetGroupMembers(c *gin.Context) {
+	// 获取参数
+	groupID := c.Query("group_id")
+	if groupID == "" {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+	members, err := h.groupService.GetGroupMembers(groupID)
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("获取群成员失败"))
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("获取群成员成功", members))
+}

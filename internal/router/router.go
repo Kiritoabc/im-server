@@ -45,6 +45,7 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.POST("/groups/query", groupHandler.QueryGroups)       // 查询群组
 		imGroup.GET("/groups/user", groupHandler.GetUserGroups)       // 获取用户所在的群聊
 		imGroup.GET("/groups/my_groups", groupHandler.GetMyAllGroups) // 获取用户的所有群聊
+		imGroup.GET("/groups/members", groupHandler.GetGroupMembers)  // 获取群聊的所有成员
 
 		// WebSocket 路由，使用鉴权中间件
 		imGroup.GET("/ws", kimi.HandleWebSocket)

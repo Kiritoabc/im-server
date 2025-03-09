@@ -239,3 +239,34 @@ func (s *GroupService) GetMyAllGroups(userId uint) (vo.GroupChatList, error) {
 	groupChatList.JoinedGroups = joinedGroups
 	return groupChatList, nil
 }
+
+// GetGroupMembers 获取群聊成员
+func (s *GroupService) GetGroupMembers(groupId string) ([]vo.UserVO, error) {
+	// 查询群聊成员
+	var groupMembers []db.GroupMember
+	if err := s.db.Where("group_id =?", groupId).Find(&groupMembers).Error; err != nil {
+		return nil, err
+	}
+	// 构建响应数据
+	var userVOs []vo.UserVO
+	for _, groupMember := range groupMembers {
+		// 查询用户信息
+		var user db.User
+		if err := s.db.First(&user, groupMember.UserID).Error; err != nil {
+			return nil, err
+		}
+		userVOs = append(userVOs, vo.UserVO{
+			ID:          user.ID,
+			Username:    user.Username,
+			Email:       user.Email,
+			PhoneNumber: user.PhoneNumber,
+			AvatarURL:   user.AvatarURL,
+			Bio:         user.Bio,
+			Gender:      user.Gender,
+			CreatedAt:   user.CreatedAt,
+			UpdatedAt:   user.UpdatedAt,
+			City:        user.City,
+		})
+	}
+	return userVOs, nil
+}
