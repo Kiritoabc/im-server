@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"im-system/internal/model/db"
 	"im-system/internal/model/vo"
@@ -269,4 +270,46 @@ func (s *GroupService) GetGroupMembers(groupId string) ([]vo.UserVO, error) {
 		})
 	}
 	return userVOs, nil
+}
+
+// InviteGroup 邀请好友加入群聊
+func (s *GroupService) InviteGroup(userId uint, groupId uint, friendIds []uint) error {
+	// 查询群聊信息
+	var group db.Group
+	if err := s.db.First(&group, groupId).Error; err != nil {
+		return err
+	}
+	// 判断用户是否是群主或管理员
+	var groupMember db.GroupMember
+	if err := s.db.Where("group_id = ? AND user_id =?", groupId, userId).First(&groupMember).Error; err != nil {
+		return err
+	}
+	if groupMember.Role != Owner && groupMember.Role != Admin {
+		return errors.New("只有群主或管理员可以邀请好友加入群聊")
+	}
+
+	// 判断好友是否已经在群聊中,如果在群聊中，不拉入该好友，否则拉入群聊
+	for _, friendId := range friendIds {
+		var member db.GroupMember
+		if err := s.db.Where("group_id =? AND user_id =?", groupId, friendId).First(&member).Error; err == nil {
+			continue
+		}
+		// 查询好友的基本信息
+		var friend db.User
+		if err := s.db.First(&friend, friendId).Error; err != nil {
+			return err
+		}
+		// 好友不在群聊中，加入群聊
+		member = db.GroupMember{
+			GroupID:  groupId,
+			UserID:   friendId,
+			Nickname: friend.Username,
+			Role:     Member,
+			Level:    1,
+		}
+		if err := s.db.Create(&member).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }

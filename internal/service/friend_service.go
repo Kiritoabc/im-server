@@ -101,3 +101,36 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 
 	return resp, nil
 }
+
+// GetUserFriends 获取用户的好友
+func (s *FriendService) GetUserFriends(userID uint) ([]vo.FriendVO, error) {
+	var resp []vo.FriendVO
+
+	// 查询所有接受的好友
+	var friends []db.Friendship
+	if err := s.db.Where("user_id = ? and status = 'accepted'", userID).Find(&friends).Error; err != nil {
+		return nil, err
+	}
+
+	// 查询好友信息
+	for _, friend := range friends {
+		var user db.User
+		if err := s.db.First(&user, friend.FriendID).Error; err == nil {
+			resp = append(resp, vo.FriendVO{
+				ID:          user.ID,
+				Name:        user.Username,
+				Avatar:      user.AvatarURL,
+				Status:      "离线", // todo: 这里需要根据实际情况获取用户状态
+				Email:       user.Email,
+				PhoneNumber: user.PhoneNumber,
+				Bio:         user.Bio,
+				Gender:      user.Gender,
+				City:        user.City,
+				CreatedAt:   user.CreatedAt,
+				UpdatedAt:   user.UpdatedAt,
+			})
+		}
+	}
+
+	return resp, nil
+}

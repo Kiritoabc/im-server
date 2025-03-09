@@ -132,3 +132,28 @@ func (h *GroupHandler) GetGroupMembers(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("获取群成员成功", members))
 }
+
+// InviteGroup 邀请好友加入群聊
+func (h *GroupHandler) InviteGroup(c *gin.Context) {
+	var inviteGroupDTO dto.InviteGroupDTO
+	if err := c.ShouldBindJSON(&inviteGroupDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 调用service层处理邀请逻辑
+	if err := h.groupService.InviteGroup(userID.(uint), inviteGroupDTO.GroupID, inviteGroupDTO.FriendIDs); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("邀请失败"))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("邀请发送成功", nil))
+}
