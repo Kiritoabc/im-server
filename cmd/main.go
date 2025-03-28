@@ -15,7 +15,7 @@ func main() {
 	config.InitLogger()
 
 	// 加载配置
-	cfg, err := config.LoadConfig("config/config-docker.yaml")
+	cfg, err := config.LoadConfig("config/config.yaml")
 	if err != nil {
 		config.Logger.Fatalf("加载配置失败: %v", err)
 	}

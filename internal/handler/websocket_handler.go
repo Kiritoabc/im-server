@@ -2,14 +2,16 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 
-	"github.com/gorilla/websocket"
+	"github.com/gin-gonic/gin"
+
 	"im-system/internal/service"
+
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
@@ -23,18 +25,21 @@ var clients = make(map[string]*websocket.Conn)
 
 type WebSocketHandler struct {
 	clients        map[string]*websocket.Conn
+	groupClients   map[int][]*websocket.Conn
 	broadcast      chan Message
 	mu             sync.Mutex
 	messageService *service.MessageService
 }
 
 type Message struct {
-	Id         int    `json:"id"`
-	SenderId   int    `json:"senderId"`
-	ReceiverID int    `json:"receiverId"`
-	SenderName string `json:"senderName"`
-	Avatar     string `json:"avatar"`
-	Content    string `json:"content"`
+	Id          int    `json:"id"`
+	SenderId    int    `json:"senderId"`
+	ReceiverID  int    `json:"receiverId"` // 用于私聊
+	GroupID     int    `json:"groupId"`    // 用于群聊
+	SenderName  string `json:"senderName"`
+	Avatar      string `json:"avatar"`
+	Content     string `json:"content"`
+	MessageType string `json:"messageType"` // "private" 或 "group"
 }
 
 func NewWebSocketHandler(messageService *service.MessageService) *WebSocketHandler {
@@ -47,11 +52,11 @@ func NewWebSocketHandler(messageService *service.MessageService) *WebSocketHandl
 
 // SendMessage 发送消息
 func (h *WebSocketHandler) SendMessage(ctx *gin.Context) {
-	handleWebSocket(ctx.Writer, ctx.Request)
+	h.handleWebSocket(ctx.Writer, ctx.Request)
 }
 
 // handleWebSocket 处理WebSocket连接
-func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+func (h *WebSocketHandler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade error:", err)
@@ -83,17 +88,38 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Println("Unmarshal message error:", err)
 			continue
 		}
-		receiver := strconv.FormatInt(int64(msg.ReceiverID), 10)
-		// 发送私聊消息给目标用户,不打印也就是说没找到
-		log.Println(receiver)
-		if client, OK := clients[receiver]; OK {
-			err := client.WriteMessage(websocket.TextMessage, message)
-			if err != nil {
-				log.Println("Write message error:", err)
-				client.Close()
-				delete(clients, receiver)
+		log.Println(msg)
+		if msg.MessageType == "private" {
+			// 处理私聊消息
+			receiver := strconv.FormatInt(int64(msg.ReceiverID), 10)
+			if client, OK := clients[receiver]; OK {
+				err := client.WriteMessage(websocket.TextMessage, message)
+				if err != nil {
+					log.Println("Write message error:", err)
+					client.Close()
+					delete(clients, receiver)
+				}
 			}
-			log.Println(msg)
+		} else if msg.MessageType == "group" {
+			// 处理群聊消息
+			// 使用 messageService 获取群组成员
+			members, err := h.messageService.GetGroupMembers(msg.GroupID)
+			if err != nil {
+				log.Println("Error fetching group members:", err)
+				continue
+			}
+			// 发送消息给群组中的所有成员
+			for _, member := range members {
+				receiver := strconv.FormatInt(int64(member.UserID), 10)
+
+				if client, OK := clients[receiver]; OK && int(member.UserID) != msg.SenderId {
+					err := client.WriteMessage(websocket.TextMessage, message)
+					if err != nil {
+						log.Println("Write message error:", err)
+						client.Close()
+					}
+				}
+			}
 		}
 	}
 }
