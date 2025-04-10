@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"im-system/internal/config"
 	"log"
 	"net/http"
 	"strconv"
@@ -88,6 +89,25 @@ func (h *WebSocketHandler) handleWebSocket(w http.ResponseWriter, r *http.Reques
 			log.Println("Unmarshal message error:", err)
 			continue
 		}
+		// 保存消息到数据库
+		// 判断是群消息还是私聊消息
+		if msg.MessageType == "group" {
+			// 处理群聊消息
+			if err := h.messageService.SaveGroupMessage(uint(msg.SenderId), uint(msg.GroupID), string(message)); err != nil {
+				// 处理保存失败的情况
+				log.Println("保存消息失败", err)
+				config.Logger.Errorf("保存消息失败: %v", err)
+			}
+		}
+		if msg.MessageType == "private" {
+			// 处理私聊消息
+			if err := h.messageService.SaveMessage(uint(msg.SenderId), uint(msg.ReceiverID), string(message)); err != nil {
+				// 处理保存失败的情况
+				log.Println("保存消息失败", err)
+				config.Logger.Errorf("保存消息失败: %v", err)
+			}
+		}
+
 		log.Println(msg)
 		if msg.MessageType == "private" {
 			// 处理私聊消息

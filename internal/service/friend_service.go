@@ -1,9 +1,11 @@
 package service
 
 import (
+	"encoding/json"
 	"gorm.io/gorm"
 	"im-system/internal/model/db"
 	"im-system/internal/model/vo"
+	"log"
 )
 
 type FriendService struct {
@@ -14,6 +16,17 @@ func NewFriendService() *FriendService {
 	return &FriendService{
 		db: db.DB,
 	}
+}
+
+type Message struct {
+	Id          int    `json:"id"`
+	SenderId    int    `json:"senderId"`
+	ReceiverID  int    `json:"receiverId"` // 用于私聊
+	GroupID     int    `json:"groupId"`    // 用于群聊
+	SenderName  string `json:"senderName"`
+	Avatar      string `json:"avatar"`
+	Content     string `json:"content"`
+	MessageType string `json:"messageType"` // "private" 或 "group"
 }
 
 // GetFriendGroupsWithMembers 获取用户的好友分组及其成员
@@ -64,6 +77,17 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 	for _, friend := range friends {
 		var user db.User
 		if err := s.db.First(&user, friend.FriendID).Error; err == nil {
+			// 查询历史消息，按照时间排序
+			var messages []db.Message
+			if err := s.db.Where("sender_id =? and receiver_user_id =?", userId, friend.FriendID).
+				Or("sender_id =? and receiver_user_id =?", friend.FriendID, userId).Order("created_at").Find(&messages).Error; err != nil {
+				return nil, err
+			}
+			msgs, err := reverseMessage(messages)
+			if err != nil {
+				log.Println("reverseMessage error:", err)
+				return nil, err
+			}
 			// 将用户信息添加到分组中
 			resp = append(resp, vo.ChatVO{
 				ID:          int(user.ID),
@@ -72,7 +96,7 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 				LastMessage: "",
 				Type:        "personal",
 				// todo: 查询和好友所有的聊天记录
-				Messages: []vo.MessageVO{},
+				Messages: msgs,
 			})
 		}
 	}
@@ -88,6 +112,18 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 			return nil, err
 		}
 		// 将用户信息添加到分组中
+
+		// 查询历史消息
+		var messages []db.Message
+		if err := s.db.Where("receiver_group_id =?", group.GroupID).
+			Order("created_at").
+			Find(&messages).Error; err != nil {
+			return nil, err
+		}
+		msgs, err := reverseMessage(messages)
+		if err != nil {
+			return nil, err
+		}
 		resp = append(resp, vo.ChatVO{
 			ID:          int(groupInfo.ID),
 			Name:        groupInfo.Name,
@@ -95,7 +131,7 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 			LastMessage: "",
 			Type:        "group",
 			// todo: 查询和好友所有的聊天记录
-			Messages: []vo.MessageVO{},
+			Messages: msgs,
 		})
 	}
 
@@ -132,5 +168,26 @@ func (s *FriendService) GetUserFriends(userID uint) ([]vo.FriendVO, error) {
 		}
 	}
 
+	return resp, nil
+}
+
+// reverseMessage 反转消息
+func reverseMessage(messages []db.Message) ([]vo.MessageVO, error) {
+	var resp []vo.MessageVO
+	for i := len(messages) - 1; i >= 0; i-- {
+		var msg Message
+		if err := json.Unmarshal([]byte(messages[i].Content), &msg); err != nil {
+			log.Println("Unmarshal error:", err)
+			return nil, err
+		}
+		resp = append(resp, vo.MessageVO{
+			ID:         msg.Id,
+			Content:    msg.Content,
+			SenderID:   msg.SenderId,
+			SenderName: msg.SenderName,
+			Avatar:     msg.Avatar,
+			CreatedAt:  messages[i].CreatedAt,
+		})
+	}
 	return resp, nil
 }
