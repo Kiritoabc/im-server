@@ -1,9 +1,10 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"im-system/internal/handler"
 	"im-system/internal/module/kimi"
+
+	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes 注册所有路由
@@ -12,7 +13,8 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 	notificationHandler *handler.NotificationHandler,
 	friendGroupHandler *handler.FriendGroupHandler,
 	groupHandler *handler.GroupHandler,
-	webSocketHandler *handler.WebSocketHandler) {
+	webSocketHandler *handler.WebSocketHandler,
+	chatSummaryHandler *handler.ChatSummaryHandler) {
 	imGroup := r.Group("/im-server")
 	// 注册登录模块
 	{
@@ -54,5 +56,8 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 
 		// 聊天模块
 		imGroup.GET("/private/chat", webSocketHandler.SendMessage) // 发送消息
+
+		// 添加新路由
+		imGroup.POST("/chat/summary", chatSummaryHandler.HandleChatSummary)
 	}
 }

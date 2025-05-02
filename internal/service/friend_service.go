@@ -80,7 +80,8 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 			// 查询历史消息，按照时间排序
 			var messages []db.Message
 			if err := s.db.Where("sender_id =? and receiver_user_id =?", userId, friend.FriendID).
-				Or("sender_id =? and receiver_user_id =?", friend.FriendID, userId).Order("created_at").Find(&messages).Error; err != nil {
+				Or("sender_id =? and receiver_user_id =?", friend.FriendID, userId).
+				Order("created_at desc").Find(&messages).Error; err != nil {
 				return nil, err
 			}
 			msgs, err := reverseMessage(messages)
@@ -111,12 +112,10 @@ func (s *FriendService) GetUserFriendsChat(userId uint) ([]vo.ChatVO, error) {
 		if err := s.db.First(&groupInfo, group.GroupID).Error; err != nil {
 			return nil, err
 		}
-		// 将用户信息添加到分组中
-
 		// 查询历史消息
 		var messages []db.Message
 		if err := s.db.Where("receiver_group_id =?", group.GroupID).
-			Order("created_at").
+			Order("created_at desc").
 			Find(&messages).Error; err != nil {
 			return nil, err
 		}

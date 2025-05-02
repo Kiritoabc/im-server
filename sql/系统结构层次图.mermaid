@@ -1,0 +1,9 @@
+graph TD
+    A[用户界面层] --> B[前端框架 Vue.js]
+B --> C[应用逻辑层]
+C --> D[后端框架 Golang]
+D --> E[服务层]
+E --> F[WebSocket 服务]
+E --> G[LLM 服务 Kimi接口]
+D --> H[数据持久层]
+H --> I[数据库 MySQL]

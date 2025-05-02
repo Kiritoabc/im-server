@@ -10,12 +10,19 @@ import (
 	"im-system/internal/service"
 )
 
+const (
+	// 定义常量，用于指定配置文件的路径
+	dockerConfigPath = "config/config-docker.yaml"
+	//localConfigPath  = "config/config-local.yaml"
+	configPath = "config/config.yaml"
+)
+
 func main() {
 	// 初始化日志
 	config.InitLogger()
 
 	// 加载配置
-	cfg, err := config.LoadConfig("config/config-docker.yaml")
+	cfg, err := config.LoadConfig(dockerConfigPath)
 	if err != nil {
 		config.Logger.Fatalf("加载配置失败: %v", err)
 	}
@@ -47,6 +54,7 @@ func main() {
 
 	// 初始化消息服务
 	messageService := service.NewMessageService()
+	chatSummaryHandler := handler.NewChatSummaryHandler(messageService)
 
 	// 初始化 WebSocket 处理器
 	webSocketHandler := handler.NewWebSocketHandler(messageService)
@@ -66,7 +74,7 @@ func main() {
 	r.Use(middle.AuthMiddleware())
 
 	// 注册路由
-	router.RegisterRoutes(r, userHandler, friendHandler, notificationHandler, friendGroupHandler, groupHandler, webSocketHandler)
+	router.RegisterRoutes(r, userHandler, friendHandler, notificationHandler, friendGroupHandler, groupHandler, webSocketHandler, chatSummaryHandler)
 
 	// 启动服务器
 	config.Logger.Infof("HTTP服务器启动在端口%s\n", cfg.Server.HTTPPort)
