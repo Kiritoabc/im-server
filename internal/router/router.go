@@ -18,14 +18,15 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 	imGroup := r.Group("/im-server")
 	// 注册登录模块
 	{
-		imGroup.POST("/register", userHandler.Register)
-		imGroup.POST("/login", userHandler.Login)
-		imGroup.POST("/logout", userHandler.Logout) // 退出登录接口
+		imGroup.POST("/register", userHandler.Register) // 注册接口
+		imGroup.POST("/login", userHandler.Login)       // 登录接口
+		imGroup.POST("/logout", userHandler.Logout)     // 退出登录接口
 		// user 模块
-		imGroup.GET("/user/userInfo", userHandler.GetUserInfo)
+		imGroup.GET("/user/userInfo", userHandler.GetUserInfo)     // 获取用户信息
 		imGroup.POST("/user/add_friend", userHandler.AddFriend)    // 添加好友的路由
 		imGroup.POST("/user/update", userHandler.UpdateUserInfo)   // 更新用户信息
 		imGroup.POST("/user/query", userHandler.QueryUserAndGroup) // 查询用户和群聊信息
+		imGroup.POST("/user/del_friend", userHandler.DeleteFriend) // 搜索用户
 
 		// 使用 friends 前缀
 		friendsGroup := imGroup.Group("/friends")

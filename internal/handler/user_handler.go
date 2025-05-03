@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"im-system/internal/config"
 	"im-system/internal/model"
 	"im-system/internal/model/db"
 	"im-system/internal/model/dto"
 	"im-system/internal/service"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
@@ -169,4 +170,28 @@ func (h *UserHandler) QueryUserAndGroup(c *gin.Context) {
 	}
 
 	model.SendResponse(c, http.StatusOK, model.Success("查询成功", result))
+}
+
+// DeleteFriend 删除好友
+func (h *UserHandler) DeleteFriend(c *gin.Context) {
+	var deleteFriendDTO dto.DeleteFriendDTO
+	if err := c.ShouldBindJSON(&deleteFriendDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	if err := h.userService.DeleteFriend(userID.(uint), deleteFriendDTO.FriendID); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("删除好友成功", nil))
 }

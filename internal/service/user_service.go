@@ -3,14 +3,15 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"im-system/internal/config"
 	"im-system/internal/middle"
 	"im-system/internal/model/db"
 	"im-system/internal/model/dto"
 	"im-system/internal/model/vo"
 	"im-system/internal/utils"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type UserService struct {
@@ -242,4 +243,33 @@ func (s *UserService) QueryUserAndGroup(dto dto.QueryUserAndGroupDTO) (vo.UserAn
 		Users:  userVOs,
 		Groups: groupVOs,
 	}, nil
+}
+
+// DeleteFriend 删除好友
+func (s *UserService) DeleteFriend(userID, friendID uint) error {
+	// 检查好友关系是否存在
+	var friendRelation db.Friendship
+	if err := s.db.Where("user_id = ? AND friend_id = ?", userID, friendID).First(&friendRelation).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("好友关系不存在")
+		}
+		return err
+	}
+
+	// 删除好友关系
+	if err := s.db.Delete(&friendRelation).Error; err != nil {
+		config.Logger.Error(err)
+		return errors.New("删除好友失败")
+	}
+
+	// 删除对方的好友关系
+	var reverseFriendRelation db.Friendship
+	if err := s.db.Where("user_id = ? AND friend_id = ?", friendID, userID).First(&reverseFriendRelation).Error; err == nil {
+		if err := s.db.Delete(&reverseFriendRelation).Error; err != nil {
+			config.Logger.Error(err)
+			return errors.New("删除好友失败")
+		}
+	}
+
+	return nil
 }
