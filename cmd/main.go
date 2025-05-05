@@ -20,7 +20,7 @@ const (
 func main() {
 	// 初始化日志
 	config.InitLogger()
-
+	config.Logger.Info("开始初始化")
 	// 加载配置
 	cfg, err := config.LoadConfig(dockerConfigPath)
 	if err != nil {

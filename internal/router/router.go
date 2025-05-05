@@ -26,11 +26,12 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.POST("/user/add_friend", userHandler.AddFriend)    // 添加好友的路由
 		imGroup.POST("/user/update", userHandler.UpdateUserInfo)   // 更新用户信息
 		imGroup.POST("/user/query", userHandler.QueryUserAndGroup) // 查询用户和群聊信息
-		imGroup.POST("/user/del_friend", userHandler.DeleteFriend) // 搜索用户
+		imGroup.POST("/user/del_friend", userHandler.DeleteFriend) // 删除好友
 
 		// 使用 friends 前缀
 		friendsGroup := imGroup.Group("/friends")
 		friendsGroup.GET("/user/groups", friendHandler.GetUserFriendAllFriends) // 获取好友分组的路由
+		friendsGroup.GET("/user/friend_groups", friendHandler.GetFriendGroups)  // 获取用户的好友列表(用于好友模块)
 		friendsGroup.GET("/usr/friends_chat", friendHandler.GetUserFriendsChat) // 获取用户的好友列表(用于私聊模块)
 		friendsGroup.GET("/all", friendHandler.GetUserFriends)                  // 获取用户的好友列表(用于好友模块)
 
