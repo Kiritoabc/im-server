@@ -53,12 +53,13 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.GET("/friend_groups", friendGroupHandler.GetUserFriendGroups) // 获取用户的所有好友分组
 
 		// 群组模块
-		imGroup.POST("/groups", groupHandler.CreateGroup)             // 创建群组
-		imGroup.POST("/groups/query", groupHandler.QueryGroups)       // 查询群组
-		imGroup.GET("/groups/user", groupHandler.GetUserGroups)       // 获取用户所在的群聊
-		imGroup.GET("/groups/my_groups", groupHandler.GetMyAllGroups) // 获取用户的所有群聊
-		imGroup.GET("/groups/members", groupHandler.GetGroupMembers)  // 获取群聊的所有成员
-		imGroup.POST("/groups/invite", groupHandler.InviteGroup)      // 邀请好友加入群聊
+		imGroup.POST("/groups", groupHandler.CreateGroup)                         // 创建群组
+		imGroup.POST("/groups/query", groupHandler.QueryGroups)                   // 查询群组
+		imGroup.GET("/groups/user", groupHandler.GetUserGroups)                   // 获取用户所在的群聊
+		imGroup.GET("/groups/my_groups", groupHandler.GetMyAllGroups)             // 获取用户的所有群聊
+		imGroup.GET("/groups/members", groupHandler.GetGroupMembers)              // 获取群聊的所有成员
+		imGroup.POST("/groups/invite", groupHandler.InviteGroup)                  // 邀请好友加入群聊
+		imGroup.POST("/groups/update_member_role", groupHandler.UpdateMemberRole) // 更新群成员角色
 
 		// WebSocket 路由，使用鉴权中间件
 		imGroup.GET("/ws", kimi.HandleWebSocket)

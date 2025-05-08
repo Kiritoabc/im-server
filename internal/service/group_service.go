@@ -2,9 +2,10 @@ package service
 
 import (
 	"errors"
-	"gorm.io/gorm"
 	"im-system/internal/model/db"
 	"im-system/internal/model/vo"
+
+	"gorm.io/gorm"
 )
 
 // GroupService 群组服务
@@ -313,4 +314,41 @@ func (s *GroupService) InviteGroup(userId uint, groupId uint, friendIds []uint) 
 		}
 	}
 	return nil
+}
+
+// UpdateMemberRole 更新群成员角色
+func (s *GroupService) UpdateMemberRole(groupID, memberID uint, role string) error {
+	// 检查群组是否存在
+	var group db.Group
+	if err := s.db.First(&group, groupID).Error; err != nil {
+		return errors.New("群组不存在")
+	}
+
+	// 检查成员是否在群组中
+	var member db.GroupMember
+	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, memberID).First(&member).Error; err != nil {
+		return errors.New("该用户不是群组成员")
+	}
+
+	// 检查角色是否有效
+	validRoles := map[string]bool{
+		"owner":  true,
+		"admin":  true,
+		"member": true,
+	}
+	if !validRoles[role] {
+		return errors.New("无效的角色")
+	}
+
+	// 更新成员角色
+	if err := s.db.Model(&member).Update("role", role).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetDB 获取数据库连接
+func (s *GroupService) GetDB() *gorm.DB {
+	return s.db
 }

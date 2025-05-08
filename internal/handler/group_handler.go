@@ -4,11 +4,12 @@ import (
 	"im-system/internal/model/db"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"im-system/internal/config"
 	"im-system/internal/model"
 	"im-system/internal/model/dto"
 	"im-system/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type GroupHandler struct {
@@ -156,4 +157,58 @@ func (h *GroupHandler) InviteGroup(c *gin.Context) {
 	}
 
 	model.SendResponse(c, http.StatusOK, model.Success("邀请发送成功", nil))
+}
+
+// UpdateMemberRole 更新群成员角色
+func (h *GroupHandler) UpdateMemberRole(c *gin.Context) {
+	var updateRoleDTO struct {
+		GroupID  uint   `json:"group_id" binding:"required"`
+		MemberID uint   `json:"member_id" binding:"required"`
+		Role     string `json:"role" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&updateRoleDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 检查当前用户是否有权限修改成员角色
+	var currentMember db.GroupMember
+	if err := h.groupService.GetDB().Where("group_id = ? AND user_id = ?", updateRoleDTO.GroupID, userID).First(&currentMember).Error; err != nil {
+		model.SendResponse(c, http.StatusForbidden, model.Error("您不是该群组成员"))
+		return
+	}
+
+	// 只有群主和管理员可以修改成员角色
+	if currentMember.Role != "owner" && currentMember.Role != "admin" {
+		model.SendResponse(c, http.StatusForbidden, model.Error("您没有权限修改成员角色"))
+		return
+	}
+
+	// 管理员不能修改群主角色
+	if currentMember.Role == "admin" {
+		var targetMember db.GroupMember
+		if err := h.groupService.GetDB().Where("group_id = ? AND user_id = ?", updateRoleDTO.GroupID, updateRoleDTO.MemberID).First(&targetMember).Error; err == nil {
+			if targetMember.Role == "owner" {
+				model.SendResponse(c, http.StatusForbidden, model.Error("管理员不能修改群主角色"))
+				return
+			}
+		}
+	}
+
+	// 更新成员角色
+	if err := h.groupService.UpdateMemberRole(updateRoleDTO.GroupID, updateRoleDTO.MemberID, updateRoleDTO.Role); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("更新成员角色成功", nil))
 }
