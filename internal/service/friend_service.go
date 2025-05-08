@@ -2,7 +2,10 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
+	"im-system/internal/config"
 	"im-system/internal/model/db"
+	"im-system/internal/model/dto"
 	"im-system/internal/model/vo"
 	"log"
 
@@ -40,8 +43,8 @@ func (s *FriendService) GetUserFriendsGroups(userID uint) ([]db.FriendGroup, err
 }
 
 // GetFriendGroupsWithMembers 获取用户的好友分组及其成员
-func (s *FriendService) GetFriendGroupsWithMembers(userID uint) ([]vo.FriendGroupVO, error) {
-	var resp []vo.FriendGroupVO
+func (s *FriendService) GetFriendGroupsWithMembers(userID uint) ([]vo.FriendShipGroupVO, error) {
+	var resp []vo.FriendShipGroupVO
 
 	var groups []db.FriendGroup
 	if err := s.db.Where("user_id = ?", userID).Find(&groups).Error; err != nil {
@@ -50,11 +53,11 @@ func (s *FriendService) GetFriendGroupsWithMembers(userID uint) ([]vo.FriendGrou
 
 	// 查询当前用户的所有好友
 	for i := range groups {
-		resp = append(resp, vo.FriendGroupVO{
+		resp = append(resp, vo.FriendShipGroupVO{
 			GroupID:   groups[i].ID,
 			GroupName: groups[i].GroupName,
 			CreatedAt: groups[i].CreatedAt,
-			Members:   []db.User{},
+			Members:   []vo.FriendMemberVO{},
 		})
 		var friends []db.Friendship
 		// 查询所有接受的好友(我的好友)
@@ -65,8 +68,20 @@ func (s *FriendService) GetFriendGroupsWithMembers(userID uint) ([]vo.FriendGrou
 		for _, friend := range friends {
 			var user db.User
 			if err := s.db.First(&user, friend.FriendID).Error; err == nil {
-				// 将用户信息添加到分组中
-				resp[i].Members = append(resp[i].Members, user)
+				// 将用户信息添加到分组中，同时包含备注信息
+				resp[i].Members = append(resp[i].Members, vo.FriendMemberVO{
+					ID:          user.ID,
+					Username:    user.Username,
+					AvatarURL:   user.AvatarURL,
+					Email:       user.Email,
+					PhoneNumber: user.PhoneNumber,
+					Bio:         user.Bio,
+					Gender:      user.Gender,
+					City:        user.City,
+					Remark:      friend.Remark, // 添加备注信息
+					CreatedAt:   user.CreatedAt,
+					UpdatedAt:   user.UpdatedAt,
+				})
 			}
 		}
 	}
@@ -236,4 +251,40 @@ func (s *FriendService) SearchFriendGroups(userID uint, keyword string) ([]vo.Fr
 	}
 
 	return resp, nil
+}
+
+// UpdateFriendGroup 更新好友分组
+func (s *FriendService) UpdateFriendGroup(userID uint, dto dto.UpdateFriendGroupDTO) error {
+	// 检查好友关系是否存在
+	var friendship db.Friendship
+	if err := s.db.Where("user_id = ? AND friend_id = ?", userID, dto.FriendID).First(&friendship).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("好友关系不存在")
+		}
+		return err
+	}
+
+	// 检查目标分组是否存在
+	var group db.FriendGroup
+	if err := s.db.Where("id = ? AND user_id = ?", dto.GroupID, userID).First(&group).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("分组不存在")
+		}
+		return err
+	}
+
+	// 更新好友分组和备注
+	updates := map[string]interface{}{
+		"group_id": dto.GroupID,
+	}
+	if dto.Remark != "" {
+		updates["remark"] = dto.Remark
+	}
+
+	if err := s.db.Model(&friendship).Updates(updates).Error; err != nil {
+		config.Logger.Error(err)
+		return errors.New("更新好友分组失败")
+	}
+
+	return nil
 }

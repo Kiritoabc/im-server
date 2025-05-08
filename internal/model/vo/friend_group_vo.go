@@ -6,6 +6,7 @@ import (
 )
 
 // FriendGroupVO 好友分组视图对象
+
 type FriendGroupVO struct {
 	GroupID   uint      `json:"group_id"`   // 分组ID
 	GroupName string    `json:"group_name"` // 分组名称

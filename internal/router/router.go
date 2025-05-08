@@ -34,6 +34,7 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		friendsGroup.GET("/user/friend_groups", friendHandler.GetFriendGroups)  // 获取用户的好友列表(用于好友模块)
 		friendsGroup.GET("/usr/friends_chat", friendHandler.GetUserFriendsChat) // 获取用户的好友列表(用于私聊模块)
 		friendsGroup.GET("/all", friendHandler.GetUserFriends)                  // 获取用户的好友列表(用于好友模块)
+		friendsGroup.POST("/update", friendHandler.UpdateFriendGroup)           // 修改用户好友的分组
 
 		// notifications 通知模块
 		imGroup.GET("/notifications", notificationHandler.GetNotifications)                              // 获取通知的路由

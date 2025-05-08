@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"im-system/internal/model/dto"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -119,4 +120,30 @@ func (h *FriendHandler) SearchFriendGroups(c *gin.Context) {
 	}
 
 	model.SendResponse(c, http.StatusOK, model.Success("搜索好友分组成功", groups))
+}
+
+// UpdateFriendGroup 更新好友分组
+func (h *FriendHandler) UpdateFriendGroup(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 解析请求参数
+	var updateDTO dto.UpdateFriendGroupDTO
+	if err := c.ShouldBindJSON(&updateDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求参数"))
+		return
+	}
+
+	// 调用service层更新好友分组
+	if err := h.friendService.UpdateFriendGroup(userID.(uint), updateDTO); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("更新好友分组成功", nil))
 }
