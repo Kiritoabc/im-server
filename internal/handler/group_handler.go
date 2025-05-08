@@ -265,3 +265,31 @@ func (h *GroupHandler) RemoveMember(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("成员移除成功", nil))
 }
+
+// QuitGroup 退出群聊
+func (h *GroupHandler) QuitGroup(c *gin.Context) {
+	var quitGroupDTO struct {
+		GroupID uint `json:"group_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&quitGroupDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 调用service层处理退出群聊逻辑
+	if err := h.groupService.QuitGroup(quitGroupDTO.GroupID, userID.(uint)); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("退出群聊成功", nil))
+}

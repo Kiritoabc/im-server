@@ -61,6 +61,7 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.POST("/groups/invite", groupHandler.InviteGroup)                  // 邀请好友加入群聊
 		imGroup.POST("/groups/update_member_role", groupHandler.UpdateMemberRole) // 更新群成员角色
 		imGroup.POST("/groups/remove_member", groupHandler.RemoveMember)          // 移除群成员
+		imGroup.POST("/groups/quit", groupHandler.QuitGroup)                      // 退出群聊
 
 		// WebSocket 路由，使用鉴权中间件
 		imGroup.GET("/ws", kimi.HandleWebSocket)

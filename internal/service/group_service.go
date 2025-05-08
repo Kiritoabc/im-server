@@ -379,6 +379,33 @@ func (s *GroupService) RemoveMember(groupID, memberID uint) error {
 	return nil
 }
 
+// QuitGroup 退出群聊
+func (s *GroupService) QuitGroup(groupID, userID uint) error {
+	// 检查群组是否存在
+	var group db.Group
+	if err := s.db.First(&group, groupID).Error; err != nil {
+		return errors.New("群组不存在")
+	}
+
+	// 检查用户是否是群组成员
+	var member db.GroupMember
+	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, userID).First(&member).Error; err != nil {
+		return errors.New("您不是该群组成员")
+	}
+
+	// 群主不能退出群聊
+	if member.Role == Owner {
+		return errors.New("群主不能退出群聊，请先转让群主或解散群聊")
+	}
+
+	// 删除群成员记录
+	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, userID).Delete(&db.GroupMember{}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetDB 获取数据库连接
 func (s *GroupService) GetDB() *gorm.DB {
 	return s.db
