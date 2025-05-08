@@ -261,3 +261,28 @@ func isImageFile(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif"
 }
+
+// CheckToken 检查 token 是否存在
+func (h *UserHandler) CheckToken(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 检查 token 是否存在
+	exists, err := h.userService.CheckToken(userID.(uint))
+	if err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("检查token失败"))
+		return
+	}
+
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("token已失效"))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("token有效", nil))
+}

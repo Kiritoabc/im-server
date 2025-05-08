@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"im-system/internal/config"
@@ -9,6 +10,7 @@ import (
 	"im-system/internal/model/dto"
 	"im-system/internal/model/vo"
 	"im-system/internal/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -282,4 +284,18 @@ func (s *UserService) DeleteFriend(userID, friendID uint) error {
 // UpdateUserAvatar 更新用户头像
 func (s *UserService) UpdateUserAvatar(userID uint, avatarURL string) error {
 	return s.db.Model(&db.User{}).Where("id = ?", userID).Update("avatar_url", avatarURL).Error
+}
+
+// CheckToken 检查 token 是否存在
+func (s *UserService) CheckToken(userID uint) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 检查 Redis 中是否存在该用户的 JWT token
+	exists, err := config.RedisClient.Exists(ctx, middle.GetRedisJWTKey(userID)).Result()
+	if err != nil {
+		return false, err
+	}
+
+	return exists == 1, nil
 }

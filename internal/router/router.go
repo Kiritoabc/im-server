@@ -22,9 +22,10 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 	imGroup := r.Group("/im-server")
 	// 注册登录模块
 	{
-		imGroup.POST("/register", userHandler.Register) // 注册接口
-		imGroup.POST("/login", userHandler.Login)       // 登录接口
-		imGroup.POST("/logout", userHandler.Logout)     // 退出登录接口
+		imGroup.POST("/register", userHandler.Register)          // 注册接口
+		imGroup.POST("/login", userHandler.Login)                // 登录接口
+		imGroup.POST("/logout", userHandler.Logout)              // 退出登录接口
+		imGroup.GET("/user/check_token", userHandler.CheckToken) // 检查token是否有效
 		// user 模块
 		imGroup.GET("/user/userInfo", userHandler.GetUserInfo)        // 获取用户信息
 		imGroup.POST("/user/add_friend", userHandler.AddFriend)       // 添加好友的路由
