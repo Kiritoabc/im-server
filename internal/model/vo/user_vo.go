@@ -16,4 +16,5 @@ type UserVO struct {
 	CreatedAt   time.Time `json:"created_at"`   // 创建时间
 	UpdatedAt   time.Time `json:"updated_at"`   // 更新时间
 	City        string    `json:"city"`         // 用户城市
+	Role        string    `json:"role"`         // 用户角色
 }

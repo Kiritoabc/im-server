@@ -267,6 +267,7 @@ func (s *GroupService) GetGroupMembers(groupId string) ([]vo.UserVO, error) {
 			CreatedAt:   user.CreatedAt,
 			UpdatedAt:   user.UpdatedAt,
 			City:        user.City,
+			Role:        groupMember.Role, // 添加角色字段
 		})
 	}
 	return userVOs, nil
