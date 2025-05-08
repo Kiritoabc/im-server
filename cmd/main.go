@@ -22,7 +22,7 @@ func main() {
 	config.InitLogger()
 	config.Logger.Info("开始初始化")
 	// 加载配置
-	cfg, err := config.LoadConfig(dockerConfigPath)
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		config.Logger.Fatalf("加载配置失败: %v", err)
 	}

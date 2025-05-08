@@ -41,6 +41,7 @@ type Message struct {
 	Avatar      string `json:"avatar"`
 	Content     string `json:"content"`
 	MessageType string `json:"messageType"` // "private" 或 "group"
+	CreatedAt   string `json:"createdAt"`   // 2025-05-07T16:17:21+08:00
 }
 
 func NewWebSocketHandler(messageService *service.MessageService) *WebSocketHandler {

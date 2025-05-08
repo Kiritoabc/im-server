@@ -5,9 +5,9 @@ server:
 # docker run --name mysql-im -e MYSQL_ROOT_PASSWORD=Kirito768168 -p 3307:3306 -d mysql:latest
 mysql:
   host: localhost
-  port: 3306
+  port: 3307
   username: root
-  password: 123456
+  password: Kirito768168
   database: im_db
 
 # Redis 配置
