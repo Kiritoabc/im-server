@@ -156,8 +156,13 @@ func (s *UserService) AddFriend(addFriendDto dto.AddFriendDTO) error {
 
 // Logout 处理用户退出登录
 func (s *UserService) Logout(c *gin.Context, userId uint) error {
-	// 删除 Redis 中的用户信息
-	if err := config.RedisClient.Del(c, middle.GetRedisUserInfoKey(userId)).Err(); err != nil {
+	// 使用 pipeline 删除 Redis 中的用户信息和 JWT token
+	pipe := config.RedisClient.Pipeline()
+	pipe.Del(c, middle.GetRedisUserInfoKey(userId))
+	pipe.Del(c, middle.GetRedisJWTKey(userId))
+
+	_, err := pipe.Exec(c)
+	if err != nil {
 		config.Logger.Error(err)
 		return err
 	}

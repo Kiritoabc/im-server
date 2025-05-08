@@ -8,8 +8,9 @@ import (
 	"im-system/internal/model/db"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"im-system/internal/config"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 // Claims 自定义的 JWT 载荷
@@ -20,6 +21,11 @@ type Claims struct {
 
 func GetRedisUserInfoKey(userId uint) string {
 	return fmt.Sprintf("user_login_id:%d", userId)
+}
+
+// GetRedisJWTKey 获取 JWT 的 Redis key
+func GetRedisJWTKey(userId uint) string {
+	return fmt.Sprintf("login:user:jwt:%d", userId)
 }
 
 // GenerateJWT 生成 JWT
@@ -46,6 +52,20 @@ func ValidateJWT(tokenString string) (uint, error) {
 		return 0, errors.New("无效的token")
 	}
 
+	// 从 Redis 中获取存储的 JWT
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	storedToken, err := config.RedisClient.Get(ctx, GetRedisJWTKey(claims.UserID)).Result()
+	if err != nil {
+		return 0, errors.New("token已过期或不存在")
+	}
+
+	// 比对当前 token 和存储的 token 是否一致
+	if storedToken != tokenString {
+		return 0, errors.New("token已失效")
+	}
+
 	return claims.UserID, nil
 }
 
@@ -55,12 +75,28 @@ func SetTokenToRedis(userID uint, user db.User) error {
 	defer cancel()
 
 	redisKey := GetRedisUserInfoKey(userID)
+	jwtKey := GetRedisJWTKey(userID)
 
 	marshal, err := json.Marshal(user)
 	if err != nil {
 		return err
 	}
 
+	// 生成 JWT
+	token, err := GenerateJWT(userID)
+	if err != nil {
+		return err
+	}
+
+	// 使用 pipeline 批量执行 Redis 命令
+	pipe := config.RedisClient.Pipeline()
+
 	// 存储用户基本信息
-	return config.RedisClient.Set(ctx, redisKey, marshal, 72*time.Hour).Err()
+	pipe.Set(ctx, redisKey, marshal, 72*time.Hour)
+	// 存储 JWT token
+	pipe.Set(ctx, jwtKey, token, 72*time.Hour)
+
+	// 执行 pipeline
+	_, err = pipe.Exec(ctx)
+	return err
 }

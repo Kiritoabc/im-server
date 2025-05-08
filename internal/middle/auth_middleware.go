@@ -3,6 +3,7 @@ package middle
 import (
 	"context"
 	"encoding/json"
+	"im-system/internal/model"
 	"im-system/internal/model/db"
 	"net/http"
 	"strings"
@@ -49,7 +50,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		cacheUserInfo, err := config.RedisClient.Get(ctx, GetRedisUserInfoKey(userID)).Result()
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "用户信息已过期，请重新登录"})
+			model.SendResponse(c, http.StatusUnauthorized, model.Unauthorized("请重新登录"))
 			c.Abort()
 			return
 		}
