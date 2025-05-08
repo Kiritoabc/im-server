@@ -273,3 +273,8 @@ func (s *UserService) DeleteFriend(userID, friendID uint) error {
 
 	return nil
 }
+
+// UpdateUserAvatar 更新用户头像
+func (s *UserService) UpdateUserAvatar(userID uint, avatarURL string) error {
+	return s.db.Model(&db.User{}).Where("id = ?", userID).Update("avatar_url", avatarURL).Error
+}

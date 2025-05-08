@@ -15,6 +15,10 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 	groupHandler *handler.GroupHandler,
 	webSocketHandler *handler.WebSocketHandler,
 	chatSummaryHandler *handler.ChatSummaryHandler) {
+
+	// 配置静态文件服务
+	r.Static("/static", "./static")
+
 	imGroup := r.Group("/im-server")
 	// 注册登录模块
 	{
@@ -22,11 +26,12 @@ func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler,
 		imGroup.POST("/login", userHandler.Login)       // 登录接口
 		imGroup.POST("/logout", userHandler.Logout)     // 退出登录接口
 		// user 模块
-		imGroup.GET("/user/userInfo", userHandler.GetUserInfo)     // 获取用户信息
-		imGroup.POST("/user/add_friend", userHandler.AddFriend)    // 添加好友的路由
-		imGroup.POST("/user/update", userHandler.UpdateUserInfo)   // 更新用户信息
-		imGroup.POST("/user/query", userHandler.QueryUserAndGroup) // 查询用户和群聊信息
-		imGroup.POST("/user/del_friend", userHandler.DeleteFriend) // 删除好友
+		imGroup.GET("/user/userInfo", userHandler.GetUserInfo)        // 获取用户信息
+		imGroup.POST("/user/add_friend", userHandler.AddFriend)       // 添加好友的路由
+		imGroup.POST("/user/update", userHandler.UpdateUserInfo)      // 更新用户信息
+		imGroup.POST("/user/query", userHandler.QueryUserAndGroup)    // 查询用户和群聊信息
+		imGroup.POST("/user/del_friend", userHandler.DeleteFriend)    // 删除好友
+		imGroup.POST("/user/upload_avatar", userHandler.UploadAvatar) // 上传头像
 
 		// 使用 friends 前缀
 		friendsGroup := imGroup.Group("/friends")

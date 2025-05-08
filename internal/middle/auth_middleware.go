@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"im-system/internal/model/db"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +15,13 @@ import (
 // AuthMiddleware JWT 验证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 忽略注册和登录请求
+		// 放行静态文件请求
+		if strings.HasPrefix(c.Request.URL.Path, "/static/") {
+			c.Next()
+			return
+		}
+
+		// 放行登录注册等接口
 		if c.Request.URL.Path == "/im-server/register" || c.Request.URL.Path == "/im-server/login" ||
 			c.Request.URL.Path == "/im-server/ws" || c.Request.URL.Path == "/im-server/private/chat" {
 			c.Next()
@@ -46,7 +53,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// todo: 将userInfo 反序列化
 		userInfo := &db.User{}
 		if err = json.Unmarshal([]byte(cacheUserInfo), &userInfo); err != nil {
 			config.Logger.Error(err)

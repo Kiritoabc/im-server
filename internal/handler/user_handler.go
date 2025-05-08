@@ -1,12 +1,17 @@
 package handler
 
 import (
+	"fmt"
 	"im-system/internal/config"
 	"im-system/internal/model"
 	"im-system/internal/model/db"
 	"im-system/internal/model/dto"
 	"im-system/internal/service"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -194,4 +199,65 @@ func (h *UserHandler) DeleteFriend(c *gin.Context) {
 	}
 
 	model.SendResponse(c, http.StatusOK, model.Success("删除好友成功", nil))
+}
+
+// UploadAvatar 上传用户头像
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 获取上传的文件
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("请选择要上传的头像文件"))
+		return
+	}
+
+	// 检查文件类型
+	if !isImageFile(file.Filename) {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("只支持上传图片文件"))
+		return
+	}
+
+	// 生成文件名：用户ID_时间戳.扩展名
+	ext := filepath.Ext(file.Filename)
+	filename := fmt.Sprintf("%d_%d%s", userID, time.Now().Unix(), ext)
+
+	// 确保 avatars 目录存在
+	avatarDir := "static/avatars"
+	if err := os.MkdirAll(avatarDir, 0755); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("创建头像目录失败"))
+		return
+	}
+
+	// 保存文件
+	filepath := filepath.Join(avatarDir, filename)
+	if err := c.SaveUploadedFile(file, filepath); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("保存头像文件失败"))
+		return
+	}
+
+	// 更新用户头像URL
+	avatarURL := fmt.Sprintf("/static/avatars/%s", filename)
+	if err := h.userService.UpdateUserAvatar(userID.(uint), avatarURL); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error("更新用户头像失败"))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("上传头像成功", gin.H{
+		"avatar_url": "http://localhost:8080" + avatarURL,
+	}))
+}
+
+// isImageFile 检查文件是否为图片
+func isImageFile(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif"
 }
