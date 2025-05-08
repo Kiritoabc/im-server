@@ -20,9 +20,9 @@ func NewGroupService() *GroupService {
 }
 
 const (
-	Admin  = "admin"
-	Owner  = "owner"
-	Member = "member"
+	Admin  = "admin"  // 管理员
+	Owner  = "owner"  // 群主
+	Member = "member" // 成员
 )
 
 var GroupNameMap = map[string]string{
