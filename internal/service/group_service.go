@@ -186,11 +186,15 @@ func (s *GroupService) GetMyAllGroups(userId uint) (vo.GroupChatList, error) {
 		groupStatus.Local = 0
 		var previewMembers []vo.PreviewMember
 		for _, member := range members {
+			// 查询用户信息
+			var user db.User
+			if err := s.db.First(&user, member.UserID).Error; err != nil {
+				return vo.GroupChatList{}, err
+			}
 			previewMembers = append(previewMembers, vo.PreviewMember{
-				ID:   member.UserID,
-				Name: member.Nickname,
-				// todo: 查询用户头像
-				Avatar: defaultUserAvatar,
+				ID:     member.UserID,
+				Name:   member.Nickname,
+				Avatar: user.AvatarURL,
 				Role:   member.Role,
 			})
 		}
@@ -342,6 +346,33 @@ func (s *GroupService) UpdateMemberRole(groupID, memberID uint, role string) err
 
 	// 更新成员角色
 	if err := s.db.Model(&member).Update("role", role).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RemoveMember 移除群成员
+func (s *GroupService) RemoveMember(groupID, memberID uint) error {
+	// 检查群组是否存在
+	var group db.Group
+	if err := s.db.First(&group, groupID).Error; err != nil {
+		return errors.New("群组不存在")
+	}
+
+	// 检查要移除的成员是否存在
+	var member db.GroupMember
+	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, memberID).First(&member).Error; err != nil {
+		return errors.New("该用户不是群组成员")
+	}
+
+	// 不能移除群主
+	if member.Role == Owner {
+		return errors.New("不能移除群主")
+	}
+
+	// 删除群成员记录
+	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, memberID).Delete(&db.GroupMember{}).Error; err != nil {
 		return err
 	}
 

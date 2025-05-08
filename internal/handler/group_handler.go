@@ -212,3 +212,56 @@ func (h *GroupHandler) UpdateMemberRole(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("更新成员角色成功", nil))
 }
+
+// RemoveMember 移除群成员
+func (h *GroupHandler) RemoveMember(c *gin.Context) {
+	var removeMemberDTO struct {
+		GroupID  uint `json:"group_id" binding:"required"`
+		MemberID uint `json:"member_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&removeMemberDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 检查当前用户是否有权限移除成员
+	var currentMember db.GroupMember
+	if err := h.groupService.GetDB().Where("group_id = ? AND user_id = ?", removeMemberDTO.GroupID, userID).First(&currentMember).Error; err != nil {
+		model.SendResponse(c, http.StatusForbidden, model.Error("您不是该群组成员"))
+		return
+	}
+
+	// 只有群主和管理员可以移除成员
+	if currentMember.Role != "owner" && currentMember.Role != "admin" {
+		model.SendResponse(c, http.StatusForbidden, model.Error("您没有权限移除成员"))
+		return
+	}
+
+	// 管理员不能移除其他管理员
+	if currentMember.Role == "admin" {
+		var targetMember db.GroupMember
+		if err := h.groupService.GetDB().Where("group_id = ? AND user_id = ?", removeMemberDTO.GroupID, removeMemberDTO.MemberID).First(&targetMember).Error; err == nil {
+			if targetMember.Role == "admin" {
+				model.SendResponse(c, http.StatusForbidden, model.Error("管理员不能移除其他管理员"))
+				return
+			}
+		}
+	}
+
+	// 移除成员
+	if err := h.groupService.RemoveMember(removeMemberDTO.GroupID, removeMemberDTO.MemberID); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("成员移除成功", nil))
+}
