@@ -126,3 +126,8 @@ CREATE TABLE system_logs (
                              message TEXT COMMENT '日志内容',
                              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间，默认为当前时间'
 ) COMMENT='系统日志表';
+
+# 新增的字段
+ALTER TABLE `groups`
+    ADD COLUMN `announcement` TEXT COMMENT '群公告，允许为空' AFTER `group_avatar`,
+    ADD COLUMN `description` TEXT COMMENT '群描述，允许为空' AFTER `announcement`;

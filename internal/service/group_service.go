@@ -203,12 +203,12 @@ func (s *GroupService) GetMyAllGroups(userId uint) (vo.GroupChatList, error) {
 			createGroups = append(createGroups, vo.GroupChatDetail{
 				ID:          group.ID,
 				Name:        group.Name,
-				Avatar:      defaultUserAvatar,
+				Avatar:      group.GroupAvatar,
 				MemberCount: len(members),
 				// todo: 添加群聊统计信息
 				Category:       "游戏交友",
-				Announcement:   "暂无",
-				Description:    "暂无",
+				Announcement:   group.Announcement,
+				Description:    group.Description,
 				Stats:          groupStatus,
 				PreviewMembers: previewMembers,
 			})
@@ -216,12 +216,12 @@ func (s *GroupService) GetMyAllGroups(userId uint) (vo.GroupChatList, error) {
 			managedGroups = append(managedGroups, vo.GroupChatDetail{
 				ID:          group.ID,
 				Name:        group.Name,
-				Avatar:      defaultUserAvatar,
+				Avatar:      group.GroupAvatar,
 				MemberCount: len(members),
 				// todo: 添加群聊统计信息
 				Category:       "游戏交友",
-				Announcement:   "暂无",
-				Description:    "暂无",
+				Announcement:   group.Announcement,
+				Description:    group.Description,
 				Stats:          groupStatus,
 				PreviewMembers: previewMembers,
 			})
@@ -229,12 +229,12 @@ func (s *GroupService) GetMyAllGroups(userId uint) (vo.GroupChatList, error) {
 			joinedGroups = append(joinedGroups, vo.GroupChatDetail{
 				ID:          group.ID,
 				Name:        group.Name,
-				Avatar:      defaultUserAvatar,
+				Avatar:      group.GroupAvatar,
 				MemberCount: len(members),
 				// todo: 添加群聊统计信息
 				Category:       "游戏交友",
-				Announcement:   "暂无",
-				Description:    "暂无",
+				Announcement:   group.Announcement,
+				Description:    group.Description,
 				Stats:          groupStatus,
 				PreviewMembers: previewMembers,
 			})
@@ -400,6 +400,52 @@ func (s *GroupService) QuitGroup(groupID, userID uint) error {
 
 	// 删除群成员记录
 	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, userID).Delete(&db.GroupMember{}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateGroup 更新群聊信息
+func (s *GroupService) UpdateGroup(groupID uint, userID uint, updateData struct {
+	Name         string `json:"name"`
+	GroupAvatar  string `json:"group_avatar"`
+	Announcement string `json:"announcement"`
+	Description  string `json:"description"`
+}) error {
+	// 检查群组是否存在
+	var group db.Group
+	if err := s.db.First(&group, groupID).Error; err != nil {
+		return errors.New("群组不存在")
+	}
+
+	// 检查用户是否是群组成员
+	var member db.GroupMember
+	if err := s.db.Where("group_id = ? AND user_id = ?", groupID, userID).First(&member).Error; err != nil {
+		return errors.New("您不是该群组成员")
+	}
+
+	// 只有群主和管理员可以更新群信息
+	if member.Role != Owner && member.Role != Admin {
+		return errors.New("只有群主和管理员可以更新群信息")
+	}
+
+	// 更新群组信息
+	updates := map[string]interface{}{}
+	if updateData.Name != "" {
+		updates["name"] = updateData.Name
+	}
+	if updateData.GroupAvatar != "" {
+		updates["group_avatar"] = updateData.GroupAvatar
+	}
+	if updateData.Announcement != "" {
+		updates["announcement"] = updateData.Announcement
+	}
+	if updateData.Description != "" {
+		updates["description"] = updateData.Description
+	}
+
+	if err := s.db.Model(&group).Updates(updates).Error; err != nil {
 		return err
 	}
 

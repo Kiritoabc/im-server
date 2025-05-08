@@ -293,3 +293,48 @@ func (h *GroupHandler) QuitGroup(c *gin.Context) {
 
 	model.SendResponse(c, http.StatusOK, model.Success("退出群聊成功", nil))
 }
+
+// UpdateGroup 更新群聊信息
+func (h *GroupHandler) UpdateGroup(c *gin.Context) {
+	var updateGroupDTO struct {
+		GroupID      uint   `json:"group_id" binding:"required"`
+		Name         string `json:"name"`
+		GroupAvatar  string `json:"group_avatar"`
+		Announcement string `json:"announcement"`
+		Description  string `json:"description"`
+	}
+
+	if err := c.ShouldBindJSON(&updateGroupDTO); err != nil {
+		model.SendResponse(c, http.StatusBadRequest, model.Error("无效的请求"))
+		return
+	}
+
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		model.SendResponse(c, http.StatusUnauthorized, model.Error("用户未登录"))
+		return
+	}
+
+	// 构建更新数据
+	updateData := struct {
+		Name         string `json:"name"`
+		GroupAvatar  string `json:"group_avatar"`
+		Announcement string `json:"announcement"`
+		Description  string `json:"description"`
+	}{
+		Name:         updateGroupDTO.Name,
+		GroupAvatar:  updateGroupDTO.GroupAvatar,
+		Announcement: updateGroupDTO.Announcement,
+		Description:  updateGroupDTO.Description,
+	}
+
+	// 调用service层处理更新群聊信息
+	if err := h.groupService.UpdateGroup(updateGroupDTO.GroupID, userID.(uint), updateData); err != nil {
+		config.Logger.Error(err)
+		model.SendResponse(c, http.StatusInternalServerError, model.Error(err.Error()))
+		return
+	}
+
+	model.SendResponse(c, http.StatusOK, model.Success("更新群聊信息成功", nil))
+}

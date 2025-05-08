@@ -245,11 +245,6 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 
 	// 更新用户头像URL
 	avatarURL := fmt.Sprintf("/static/avatars/%s", filename)
-	if err := h.userService.UpdateUserAvatar(userID.(uint), avatarURL); err != nil {
-		config.Logger.Error(err)
-		model.SendResponse(c, http.StatusInternalServerError, model.Error("更新用户头像失败"))
-		return
-	}
 	// todo：后续再优化
 	model.SendResponse(c, http.StatusOK, model.Success("上传头像成功", gin.H{
 		"avatar_url": "http://localhost:8080" + avatarURL,
